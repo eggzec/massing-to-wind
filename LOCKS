@@ -1,0 +1,10 @@
+# Paths locked against agent edits. Checked by scripts/check-locks.sh against git tag lock-v0.1.
+# Owner adds lines at each gate, commits, then runs:  git tag -f lock-v0.1
+# Lines starting with # are ignored.
+
+AGREEMENT.md
+LOCKS
+# After M2 gate, uncomment:
+# cases/
+# src/M2W.Checker/
+# tests/M2W.Checker.Tests/

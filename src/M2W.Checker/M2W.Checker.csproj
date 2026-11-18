@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Owned by the checker agent. Locked after the M2 gate. -->
+  <ItemGroup>
+    <ProjectReference Include="..\M2W.Geometry\M2W.Geometry.csproj" />
+  </ItemGroup>
+</Project>

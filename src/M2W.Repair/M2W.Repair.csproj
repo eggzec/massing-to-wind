@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Owned by the solver agent. Must not reference M2W.Generator or M2W.Checker. -->
+  <ItemGroup>
+    <ProjectReference Include="..\M2W.Geometry\M2W.Geometry.csproj" />
+  </ItemGroup>
+</Project>

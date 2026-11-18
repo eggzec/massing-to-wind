@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Shared mesh types, OBJ reader/writer, JSON models. Owner approves changes to existing public signatures. -->
+</Project>

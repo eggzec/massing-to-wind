@@ -1,0 +1,22 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for the lock-v0.1 tag
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Create solution if missing
+        run: |
+          [ -f M2W.sln ] || { dotnet new sln -n M2W; for p in src/*/*.csproj tests/*/*.csproj; do dotnet sln M2W.sln add "$p"; done; }
+      - name: Validate
+        run: |
+          chmod +x scripts/*.sh
+          scripts/validate.sh

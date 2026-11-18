@@ -1,0 +1,10 @@
+bin/
+obj/
+out/*
+!out/.gitkeep
+*.user
+.vs/
+.vscode/
+.idea/
+TestResults/
+hidden/
