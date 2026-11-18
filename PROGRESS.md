@@ -4,7 +4,22 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-_(none open)_
+### Q-S1 · 2026-11-19 · solver · Checker misses an anchor that lies on an edge shared by two bottom triangles
+- **What happens:** `case_0284` (farCoordinates only). The solver writes the input box unchanged except for the origin
+  shift: footprint 67.4 × 14.9 = 1004.26 m², volume 14,561.77 m³, every topology check passes. `volume_m3`,
+  `footprintArea_m2` and `maxHeight_m` still fail with "no repaired shell left that contains its anchor (28.6, 56.25)".
+  The anchor is the rectangle's centre. Both diagonals of a rectangle pass through its centre, so whichever way the
+  bottom quad is split into two triangles, the anchor lies on their shared edge.
+- **Reproduction (scratch copy, nothing in the repo changed):** the same box with one extra vertex at the middle of a
+  long edge, so that no triangle edge runs through the centre, passes all three checks (`m2w check` on a copy of
+  `out/case_0284` with only `repaired.obj` edited).
+- **Effect:** 1 case today (3 have an anchor-containment failure, 2 of them also fail for other reasons). It will grow
+  when the solver rebuilds shells in M3 step 4: any rectangular bottom face split in two hides its centre.
+- **Suggested fix (checker, locked, so owner's call):** treat a point on the boundary of a bottom triangle as inside
+  (or test containment against the bottom face as a polygon, not triangle by triangle).
+- **Solver meanwhile:** I am *not* choosing triangulations to dodge anchor positions; that would be tuning output to
+  the grader. Failures caused by this are listed as such in each PROGRESS entry.
+
 
 ## Current status
 
@@ -12,11 +27,35 @@ _(none open)_
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
-| M3 Core repair | Not started | — | — |
+| M3 Core repair | In progress (step 1 of 4 done) | 75/291 | 2026-11-19 |
 | M4 Hard faults | Not started | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-19 · solver · M3 step 1: coordinate shift, welding, duplicate and degenerate faces
+- New in `src/M2W.Repair` (first real solver; `m2w run-all` now finds `M2W.Repair.MassingRepairer` instead of the stub):
+  - `RepairPipeline`: one `Solid` per input object with its own vertex list, shifted by minus `case.json` `origin`.
+  - `Welder`: grid + union-find clustering within `weld`; each cluster keeps its lowest-numbered vertex's position.
+  - `FaceCleanup`: collapses repeated indices, drops faces with < 3 distinct vertices, triangulates polygons, drops
+    triangles that repeat the same three vertices inside one object.
+  - `Planar/Triangulator`: ear clipping with hole bridges that keeps collinear vertices and never emits a zero-area
+    triangle (needed later so faces stay conforming).
+  - `ShellCheck`: the solver's own closed/manifold/oriented/volume check; any failure gives `partial` with a warning.
+  - Until step 4, each input object is written as one shell.
+- Tests: 11 solver tests (clean box, far coordinates, welding incl. nudged copies and the tolerance boundary,
+  duplicate/degenerate faces, block names, byte-identical output, triangulator on collinear points, courtyard hole,
+  L shape both ways, FsCheck property: triangles tile random star polygons exactly).
+- validate (`scripts/validate.ps1`): build ✅ · tests 2414/2414 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 11) · cases 75/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 20/30 · farCoordinates 19/31 · flippedFaces 0/29 ·
+  floatingBlock 0/30 · openSurface 0/31 · overlap 0/29 · shortEdge 0/30 · sliver 16/30 · smallGap 10/31 ·
+  stackedFloors 0/32 · sunkBlock 0/30 · touchingWalls 0/30.
+- Failures in this step's two faults: farCoordinates misses only `case_0284` among single-fault cases, which is
+  Q-S1 (checker anchor on a shared edge). duplicateVertices: the 10 failing cases are all combined with a fault
+  from a later step (openSurface, flippedFaces, smallGap, overlap, stackedFloors, shortEdge).
+- Next: M3 step 2, orientation fix and hole closing.
+- Blockers: Q-S1 (owner).
 
 ### 2026-11-18 · owner · lock check no longer skips silently (shared `scripts/`)
 - Fixes the generator's "Waiting for owner" item (removed). `scripts/check-locks.sh` exits 1 when git cannot read

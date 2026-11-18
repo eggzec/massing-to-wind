@@ -13,6 +13,24 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-027 · 2026-11-19 · solver (M3) · Per-object vertex lists; own polygon geometry, no Clipper
+- Context: blocks that touch may share or nearly share vertices; ground snap and welding must not move another
+  block's geometry. Step 4 needs 2D polygon work (union, later offsets).
+- Choice: each input object becomes a `Solid` with its own copy of the vertices it uses; welding runs inside one
+  object. Planar geometry (triangulation now, the plan arrangement in step 4) is written in `M2W.Repair`.
+- Alternatives: weld the whole input globally; Clipper2 for polygon booleans and offsets.
+- Why: per-object keeps steps independent and lets the union step see coincident faces explicitly. Clipper2 is
+  Boost-licensed (not MIT/Apache/BSD as CLAUDE.md lists) and was not in the package cache; owning the geometry
+  also keeps tolerances under the solver's control.
+- Revisit if: offsetting for `smallGap` (M4) turns out too costly to write; then ask the owner about Clipper2.
+
+## D-028 · 2026-11-19 · solver (M3) · `runtime_ms` is measured, so report.json is not byte-identical run to run
+- Context: CLAUDE.md asks for byte-identical output; AGREEMENT.md asks for `runtime_ms`.
+- Choice: `repaired.obj` is byte-identical for the same input (tested); `report.json` differs only in `runtime_ms`.
+- Alternatives: always write 0 (false information).
+- Why: a fixed fake runtime would misreport; every other field is deterministic.
+- Revisit if: the owner prefers `runtime_ms` omitted or zeroed.
+
 ## D-026 · 2026-11-18 · owner (pre-M3) · The lock check fails when it cannot use git; validate.ps1 uses Git Bash
 - Context: on Windows, plain `bash` is WSL bash. Inside a git worktree, WSL's git cannot follow the `.git` file
   (it holds a Windows path), so `check-locks.sh` read that as "no lock-v0.1 tag", skipped, and validate stayed GREEN.

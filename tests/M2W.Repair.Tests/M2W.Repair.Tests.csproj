@@ -10,6 +10,9 @@
     <PackageReference Include="FsCheck.Xunit" Version="2.16.6" />
   </ItemGroup>
   <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\M2W.Repair\M2W.Repair.csproj" />
   </ItemGroup>
 </Project>
