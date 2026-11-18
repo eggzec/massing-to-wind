@@ -4,17 +4,6 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-- **2026-11-18 · generator · AGREEMENT.md text for the approved `blocks` / `anchor_m` fields (D-017).** AGREEMENT.md
-  is locked, so I did not edit it. Suggested addition under **`expected.json`**, after the example:
-
-  > Each entry in `expected.shells` may also carry `blocks` (the input block names in that shell, e.g.
-  > `["B01", "B02"]`) and `anchor_m` (`[x, y]` in local coordinates, strictly inside the shell's footprint).
-  > The checker matches a repaired shell to an expected one by which shell contains the anchor in plan.
-  > `footprintArea_m2` is the area of the shell's bottom face at z = 0.
-
-  and in the example shell: `"genus": 0, "blocks": ["B01", "B02"], "anchor_m": [10.0, 5.0]`. Then commit and
-  `git tag -f lock-v0.1`. Additive and optional, so `schemaVersion` stays 0.1.
-
 - **2026-11-18 · generator · lock check can falsely skip (shared `scripts/`, not changed).** On this machine
   `validate.ps1` calls `bash` = WSL bash. Inside a git *worktree* WSL's git cannot follow the `.git` file (it holds a
   Windows path), so `check-locks.sh` sees "not a git repository", reports `locks: no lock-v0.1 tag yet, skipping`
@@ -27,12 +16,38 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | Milestone | Status | Pass rate | Last updated |
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
-| M2 Test cases and checker | Generator and checker done; 10/10 generated clean controls pass with zero repair; ready for the owner gate | 0/291 (stub solver, expected) | 2026-11-18 |
+| M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | Not started | — | — |
 | M4 Hard faults | Not started | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-18 · owner · M2 gate
+- Approved. `check/m2` (which already contains all of `gen/m2`) fast-forwarded into `main`. Commit `6eac5c9`
+  locks the M2 paths, and `lock-v0.1` moved to it (was `0b79d96`, the M1 lock).
+- Eye check: 5 cases drawn at random from the 290 generated (awk `srand(20261118)` shuffle of the sorted
+  `cases/case_*` list), opened in ParaView 6.1.1. In each, the owner verified that the injected fault is present
+  as `expected.json` describes it:
+  - `case_0108` flippedFaces
+  - `case_0151` touchingWalls
+  - `case_0104` sunkBlock
+  - `case_0308` stackedFloors
+  - `case_0379` shortEdge + openSurface + flippedFaces + floatingBlock
+- Locked from now on (`LOCKS`): `AGREEMENT.md`, `LOCKS`, `cases/`, `src/M2W.Checker/`, `tests/M2W.Checker.Tests/`.
+  Probe: an edit to `src/M2W.Checker/Geom.cs` made `check-locks.sh` fail and name the file; reverted.
+- AGREEMENT.md: added the owner-approved optional `blocks` / `anchor_m` per expected shell (generator D-017) with
+  the generator's suggested text, plus the footprint definition (bottom-face area at z = 0). Additive;
+  `schemaVersion` stays 0.1. The generator's "Waiting for owner" item for it is removed.
+- Owner decisions this milestone: Q1 anchor matching (D-017, D-020), Q2 footprint definition (D-022), Q3 thin
+  slivers not graded in v0.1 (D-025, KNOWN_LIMITATIONS.md).
+- validate (`scripts/validate.sh`, Git Bash, on `main`): build ✅ (0 warnings) · tests 2403/2403 (Geometry 88,
+  Cli 31, Generator 2198, Checker 86) · cases passing 0/291 (stub solver, expected until M3) · locks OK ·
+  **VALIDATE: GREEN**.
+- Next: M3. The solver works on `solve/m3`, which must be rebased onto or merged with `main` first: it branched
+  from the M1 gate and has neither the cases nor the checker.
+- Still waiting for owner: the lock check can falsely skip under WSL bash (generator item above). Until it is
+  fixed, run `scripts/validate.sh` under Git Bash, not `validate.ps1`.
 
 ### 2026-11-18 · checker · M2 Q3 answered: thin slivers not graded in v0.1
 - Owner answered Q3 with option B: no minimum-angle check; the checker keeps its 15 checks. Recorded as D-025.
