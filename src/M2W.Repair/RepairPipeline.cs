@@ -40,6 +40,23 @@ public static class RepairPipeline
         if (failedTri > 0) log.Fail($"{failedTri} input polygons are not simple; fan-triangulated");
         solids.RemoveAll(s => s.Triangles.Count == 0);
 
+        // 3. Consistent outward orientation, T-junctions on free edges, hole closing.
+        int reversed = 0, tSplits = 0, holes = 0, open = 0;
+        foreach (var s in solids)
+        {
+            var before = new HashSet<Tri>(s.Triangles.Select(t => t.Canonical()));
+            Orienter.MakeConsistent(s);
+            var hr = HoleFiller.Close(s, tol.Weld);
+            tSplits += hr.TJunctionsSplit; holes += hr.HolesFilled; open += hr.HolesLeftOpen;
+            if (hr.TJunctionsSplit > 0 || hr.HolesFilled > 0) Orienter.MakeConsistent(s);
+            Orienter.MakeOutward(s);
+            reversed += s.Triangles.Count(t => !before.Contains(t.Canonical()) && before.Contains(t.Reversed().Canonical()));
+            if (hr.HolesLeftOpen > 0) log.Fail($"object {s.Name}: {hr.HolesLeftOpen} holes could not be closed");
+        }
+        if (reversed > 0) log.Op("fixOrientation", count: reversed);
+        if (tSplits > 0) log.Op("splitTJunctions", count: tSplits);
+        if (holes > 0) log.Op("closeHoles", count: holes);
+
         // Until the union step exists, each object becomes one shell.
         var shells = new List<OutputShell>();
         foreach (var s in solids)

@@ -27,11 +27,36 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
-| M3 Core repair | In progress (step 1 of 4 done) | 75/291 | 2026-11-19 |
+| M3 Core repair | In progress (step 2 of 4 done) | 118/291 | 2026-11-19 |
 | M4 Hard faults | Not started | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-19 · solver · M3 step 2: orientation fix and hole closing
+- New: `Steps/Orienter` (orientation spread across manifold edges by BFS, then each edge-connected component with
+  negative volume turned inside out) and `Steps/HoleFiller` (first splits free edges at free-edge vertices lying on
+  them within `weld`, so a split vertex on a neighbour's edge is joined, not filled; then fills free-edge loops,
+  grouping coplanar nested loops into one polygon with holes so a deleted courtyard ground face is filled as a ring).
+  Report ops: `fixOrientation`, `splitTJunctions`, `closeHoles` with counts. A loop that cannot be filled gives
+  `partial` with a warning.
+- First run filled each loop as a disk: `case_0107` and `case_0221` (courtyard ground deleted) then covered the
+  courtyard twice (self-intersections, Euler 2 instead of 0). Fixed by the grouping above.
+- Known limit: two *adjacent* deleted faces leave one bent loop; one planar fill would cut the corner. The
+  generator deletes only non-adjacent faces; not handled.
+- Tests: 17 solver tests (+6: courtyard helper, inside-out object, FsCheck property: any random 40 % of courtyard
+  faces reversed comes back closed with the right volume, roof + ground deleted, courtyard ground deleted, split
+  vertex on an edge).
+- validate (`scripts/validate.ps1`): build ✅ · tests 2420/2420 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 17) · cases 118/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 21/30 · farCoordinates 21/31 · flippedFaces 21/29 ·
+  floatingBlock 0/30 · openSurface 23/31 · overlap 0/29 · shortEdge 0/30 · sliver 17/30 · smallGap 10/31 ·
+  stackedFloors 0/32 · sunkBlock 0/30 · touchingWalls 0/30.
+- Every flippedFaces and openSurface case where that is the only fault passes. The 8 flippedFaces and 8 openSurface
+  failures are all combined with a fault from a later step (ground snap, stackedFloors, overlap, touchingWalls,
+  smallGap, shortEdge).
+- Next: M3 step 3, ground snap.
+- Blockers: Q-S1 (owner).
 
 ### 2026-11-19 · solver · M3 step 1: coordinate shift, welding, duplicate and degenerate faces
 - New in `src/M2W.Repair` (first real solver; `m2w run-all` now finds `M2W.Repair.MassingRepairer` instead of the stub):
