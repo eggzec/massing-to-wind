@@ -4,20 +4,6 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-- **2026-11-18 · checker · Q3: should the checker grade slivers (minimum triangle angle)?** The checker grades
-  each generated case after zero repair (origin shift plus triangulation only). For `sliver`, 16 of 30 cases pass
-  every check untouched. Those are the thin slivers (smallest angle 0.07°–0.7°). The zero-area slivers are already
-  caught by `noSelfIntersections`. A solver can therefore ignore thin slivers and still score. None of the 15 checks
-  in the brief or MILESTONES looks at angles, although AGREEMENT.md defines `minAngleDeg` ("faces with a smaller
-  angle count as slivers") and lists `sliver` as a fault to fix. Every other fault is caught: 0 cases pass untouched
-  except farCoordinates (the origin shift is the fix) and above-threshold smallGap (staying apart is the answer).
-  **Option A (recommended):** add a 16th check, `minAngle_deg`: smallest triangle angle ≥ `case.json` `minAngleDeg`.
-  The generator's answers and clean controls meet it (smallest angle 14.3° in the clean controls). The catch: a
-  long, low wall (e.g. 60 m × 3 m, diagonal 2.9°) cannot be split into two triangles above 5°, so solvers must
-  insert extra vertices there.
-  **Option B:** leave it as is and document that thin slivers are not graded in v0.1 (KNOWN_LIMITATIONS.md).
-  Your call: this changes what the checker grades before it is locked. Until you decide I will not add the check.
-
 - **2026-11-18 · generator · AGREEMENT.md text for the approved `blocks` / `anchor_m` fields (D-017).** AGREEMENT.md
   is locked, so I did not edit it. Suggested addition under **`expected.json`**, after the example:
 
@@ -41,12 +27,25 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | Milestone | Status | Pass rate | Last updated |
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
-| M2 Test cases and checker | Generator and checker done; 10/10 generated clean controls pass with zero repair; 1 owner question (Q3) | 0/291 (stub solver, expected) | 2026-11-18 |
+| M2 Test cases and checker | Generator and checker done; 10/10 generated clean controls pass with zero repair; ready for the owner gate | 0/291 (stub solver, expected) | 2026-11-18 |
 | M3 Core repair | Not started | — | — |
 | M4 Hard faults | Not started | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-18 · checker · M2 Q3 answered: thin slivers not graded in v0.1
+- Owner answered Q3 with option B: no minimum-angle check; the checker keeps its 15 checks. Recorded as D-025.
+  The limit is written up in the new `KNOWN_LIMITATIONS.md` (Checker section: what is not graded, the effect on
+  `sliver` scores (16/30 pass after zero repair), why, and when to revisit). D-019 now points to D-025. Q3
+  removed from "Waiting for owner". No code changed.
+- validate (`scripts/validate.sh`, Git Bash): build ✅ (0 warnings) · tests 2403/2403 (Geometry 88, Cli 31,
+  Generator 2198, Checker 86) · cases passing 0/291 (stub solver, expected until M3) · locks OK ·
+  **VALIDATE: GREEN**.
+- M2 checker criteria all met; no checker questions open. Ready for the owner's M2 gate (5-case eye check, then
+  move `lock-v0.1` so `cases/`, `src/M2W.Checker/` and `tests/M2W.Checker.Tests/` are locked).
+- Next: owner gate. After the lock, checker changes need the owner.
+- Blockers: none.
 
 ### 2026-11-18 · checker · M2 checker: anchor matching, generated cases, a self-intersection fix
 - Merged `gen/m2` into `check/m2` (merge commit). The checker's decisions were renumbered D-018 to D-024, because

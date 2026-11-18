@@ -13,6 +13,16 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-025 · 2026-11-18 · owner (M2, checker Q3) · Thin slivers are not graded in v0.1
+- Context: after zero repair, 16 of 30 `sliver` cases pass every check, because no check looks at triangle angles
+  (the zero-area slivers are caught by `noSelfIntersections`).
+- Choice: owner chose option B. There is no minimum-angle check in v0.1, and the limit is documented in
+  KNOWN_LIMITATIONS.md. The checker keeps its 15 checks.
+- Alternatives: option A, a 16th check `minAngle_deg` ≥ `case.json` `minAngleDeg`.
+- Why: a minimum-angle check would also fail valid repairs of long, low walls unless the solver adds vertices;
+  not worth it for v0.1.
+- Revisit if: v0.2 shows the wind mesher needs a minimum angle.
+
 ## D-024 · 2026-11-18 · checker (M2) · Shape of `result.json` entries
 - Context: AGREEMENT.md gives `name/pass/value/limit` and says `watertight` value = free edges, nothing more.
 - Choice: always the same 15 checks in the same order (`CheckNames.All`). Count checks (`parse`, `watertight`,
@@ -82,7 +92,7 @@ Template:
   edges touch the other triangle, or an edge leaving the shared vertex lies in the other triangle's plane and
   points into (or along a side of) its corner there, judged by angle (1e-10); 2 → coplanar fold onto the same
   side of the shared edge, or a zero-area face lying on it; 3 → duplicate face. So a zero-area sliver counts as a
-  self-intersection; a thin but non-degenerate one does not (owner Q3).
+  self-intersection; a thin but non-degenerate one does not (not graded in v0.1, D-025).
 - Alternatives: skip all adjacent pairs (misses folds); uniform 3D grid (large roof triangles span many cells).
   The first version tested shared-vertex edges by distance after cutting 0.1 mm off them. On rotated plots with
   mm-rounded coordinates (case_0195) that flagged valid, nearly flat fans 3e-8 rad apart, which made the check
