@@ -57,6 +57,15 @@ public static class RepairPipeline
         if (tSplits > 0) log.Op("splitTJunctions", count: tSplits);
         if (holes > 0) log.Op("closeHoles", count: holes);
 
+        // 4. Ground snap: blocks within groundSnap of Z = 0 are moved onto it.
+        foreach (var mv in GroundSnapper.Snap(solids, tol.GroundSnap))
+            log.Op("groundSnap", block: mv.Block, extra: new Dictionary<string, object> { ["dz_m"] = Math.Round(mv.Dz, 9) });
+        foreach (var g in solids.GroupBy(s => s.Block))
+        {
+            var minZ = g.SelectMany(s => s.Vertices).Min(v => v.Z);
+            if (minZ < -1e-9) log.Fail($"block {g.Key} reaches {minZ:0.###} m below ground, beyond groundSnap; not moved");
+        }
+
         // Until the union step exists, each object becomes one shell.
         var shells = new List<OutputShell>();
         foreach (var s in solids)

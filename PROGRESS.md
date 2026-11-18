@@ -27,11 +27,30 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
-| M3 Core repair | In progress (step 2 of 4 done) | 118/291 | 2026-11-19 |
+| M3 Core repair | In progress (step 3 of 4 done) | 159/291 | 2026-11-19 |
 | M4 Hard faults | Not started | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-19 · solver · M3 step 3: ground snap
+- New: `Steps/GroundSnapper`. A block (all objects sharing `B<nn>`) whose lowest point is within `groundSnap` of
+  Z = 0, above or below, is moved rigidly by minus that height (height unchanged; vertices landing within 1e-9 of
+  the ground are set to exactly 0). Blocks further up are left alone (they may stand on another block). A block
+  reaching below ground beyond `groundSnap` is not moved and gives `partial` with a warning. Report op
+  `groundSnap` with `block` and `dz_m`.
+- Tests: 21 solver tests (+4: FsCheck property over offsets within ±0.9 × groundSnap, floors of one block move
+  together and other blocks separately, block on a podium not moved, deep sunk block reported partial).
+- validate (`scripts/validate.ps1`, run from PowerShell; launched from Git Bash it cannot find Git Bash for the
+  lock step): build ✅ · tests 2424/2424 (Geometry 88, Cli 31, Generator 2198, Checker 86, Repair 21) ·
+  cases 159/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 22/30 · farCoordinates 21/31 · flippedFaces 21/29 ·
+  floatingBlock 20/30 · openSurface 24/31 · overlap 0/29 · shortEdge 0/30 · sliver 17/30 · smallGap 10/31 ·
+  stackedFloors 0/32 · sunkBlock 21/30 · touchingWalls 0/30.
+- Every single-fault floatingBlock and sunkBlock case passes. The 10 + 9 failures are combined with stackedFloors,
+  overlap, touchingWalls, smallGap, sliver or shortEdge.
+- Next: M3 step 4, footprint union (stackedFloors, overlap, touchingWalls).
+- Blockers: Q-S1 (owner).
 
 ### 2026-11-19 · solver · M3 step 2: orientation fix and hole closing
 - New: `Steps/Orienter` (orientation spread across manifold edges by BFS, then each edge-connected component with
