@@ -13,8 +13,9 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 - **Reproduction (scratch copy, nothing in the repo changed):** the same box with one extra vertex at the middle of a
   long edge, so that no triangle edge runs through the centre, passes all three checks (`m2w check` on a copy of
   `out/case_0284` with only `repaired.obj` edited).
-- **Effect:** 1 case today (3 have an anchor-containment failure, 2 of them also fail for other reasons). It will grow
-  when the solver rebuilds shells in M3 step 4: any rectangular bottom face split in two hides its centre.
+- **Effect:** 1 case at M3 step 1 (3 had an anchor-containment failure, 2 of them also for other reasons). After M3
+  step 4 it is **0 cases**: the rebuilt shells happen not to put a triangle edge through any anchor. The defect is
+  still there and will hit any output whose bottom triangulation runs an edge through an anchor (hidden cases too).
 - **Suggested fix (checker, locked, so owner's call):** treat a point on the boundary of a bottom triangle as inside
   (or test containment against the bottom face as a polygon, not triangle by triangle).
 - **Solver meanwhile:** I am *not* choosing triangulations to dodge anchor positions; that would be tuning output to
@@ -27,11 +28,63 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
-| M3 Core repair | In progress (step 3 of 4 done) | 159/291 | 2026-11-19 |
-| M4 Hard faults | Not started | — | — |
+| M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
+| M4 Hard faults | Not started (M3 already passes 11/31 smallGap, 9/30 shortEdge, 28/30 sliver) | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-19 · solver · M3 step 4: footprint union (stacked floors, overlaps, touching walls); M3 criteria met
+- New `Union/HeightFieldUnion` (with `Planar/Planarizer`, `Planar/Dcel`, `Union/ShellBuilder`). The output is
+  now rebuilt as a 2.5D height field, one closed shell per connected footprint:
+  1. Each object's horizontal triangles are grouped by height level (levels within `weld` are one level); XOR of
+     their edges leaves that level's boundary. Each boundary edge is tagged (object, level). Walls are not used.
+  2. All tagged edges are planarised together (points within `weld` merged, edges split at vertices within `weld`
+     and at crossings, coordinates on a 1e-6 m grid = the OBJ precision).
+  3. Faces of the plan are labelled by a walk from outside that toggles each crossed edge's tags. Per object the
+     toggles give its solid intervals; the face height is the highest roof over it, filled down to the ground.
+     Every edge is checked for a consistent label; any open level boundary is reported (`partial`).
+  4. Neighbouring roofs less than `minEdge` apart are raised to the higher one (the step would be an edge shorter
+     than `minEdge`); op `flushRoofStep`. Only adjacent faces are touched, so separate blocks keep their heights.
+  5. Edges with the same height on both sides are dropped, collinear chains merged, and each shell is built from a
+     ground face, a roof per plan face (triangulated with holes) and walls whose vertex columns are split at every
+     height used around that vertex, so all triangles meet edge to edge.
+  Report ops: `mergeStackedFloors` (block, count), `unionBlocks` (shell, blocks), `flushRoofStep`, `rebuildShells`.
+  A block floating beyond `groundSnap` with nothing under it is filled down and reported `partial`. If the union
+  yields nothing, the per-object output of steps 1–3 is written instead, always as `partial`.
+- Bugs found on the cases and fixed:
+  - `case_0179` (touchingWalls): 13 self-intersecting pairs. B03's corners lie on B02's roof edge, and greedy
+    best-ear clipping left four nearly collinear points to the end, forcing near-zero-area triangles. Roofs up to
+    150 vertices now get an optimal triangulation (dynamic programming over valid diagonals, maximising the smallest
+    angle); ear clipping is the fallback for larger polygons.
+  - Welding test: walls with a vertex nudged within `weld` were taken as sloped. Vertical now means the plan
+    projection is thinner than 2 × `weld`.
+  - `case_0137` (overlap): roofs at 17.4 and 17.5 m left a 0.1 m step, below `minEdge`. Fixed by item 4.
+- Tests: 33 solver tests (+11: stacked floors without internal floors, crossing bars, tower through podium,
+  terrace of three touching blocks, separate blocks stay separate, courtyard keeps genus 1, roof step below / at
+  `minEdge`, wall column split at a neighbour's height, and two FsCheck properties on random multi-block,
+  multi-floor sites: rotating plus moving to map coordinates keeps shell count, Euler number and volume; repairing
+  the output again changes nothing). Step 1/3 tests updated where the union changes the expected output (floors
+  merge; a block floating 4 m up is filled down and reported partial).
+- Determinism: two full runs give byte-identical `repaired.obj` for all 291 cases.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2436/2436 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 33) · cases 252/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 25/30 · farCoordinates 28/31 · flippedFaces 24/29 ·
+  floatingBlock 25/30 · openSurface 28/31 · overlap 29/29 · shortEdge 9/30 · sliver 28/30 · smallGap 11/31 ·
+  stackedFloors 29/32 · sunkBlock 28/30 · touchingWalls 27/30.
+- **M3 target (≥ 90 % on the M3 faults, 100 % on clean):** met. Cases with an M3 fault: 205/220 (93 %). Every case
+  whose faults are all M3 faults passes: 195/195. Per fault over all its cases: farCoordinates 90 %,
+  duplicateVertices 83 %, flippedFaces 83 %, openSurface 90 %, floatingBlock 83 %, sunkBlock 93 %,
+  stackedFloors 91 %, overlap 100 %, touchingWalls 90 %. Every one of those failures is a combined case that also
+  has smallGap or shortEdge (M4). Clean 10/10.
+- All 39 remaining failures are M4 work:
+  - 22 · a gap below `minGap` not closed (shellCount / mustMerge / minGap fail): 20 smallGap cases and 2 shortEdge
+    cases whose jog leaves a gap.
+  - 16 · an output edge shorter than `minEdge` (shortEdge: split vertices, tiny ledges or jogs kept as geometry).
+  - 1 · `case_0196` (shortEdge): Euler 2 instead of 0, a courtyard closed off by a tiny feature.
+  - The sliver failures (2) are among these: `case_0263` and `case_0385` also have smallGap.
+- Next: owner midpoint review of M3. Then M4: gap closing below `minGap`, short-edge and sliver removal.
+- Blockers: Q-S1 (owner; no case affected right now).
 
 ### 2026-11-19 · solver · M3 step 3: ground snap
 - New: `Steps/GroundSnapper`. A block (all objects sharing `B<nn>`) whose lowest point is within `groundSnap` of

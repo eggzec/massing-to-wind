@@ -2,6 +2,7 @@ using M2W.Geometry;
 using M2W.Geometry.Models;
 using M2W.Repair.Model;
 using M2W.Repair.Steps;
+using M2W.Repair.Union;
 
 namespace M2W.Repair;
 
@@ -66,7 +67,42 @@ public static class RepairPipeline
             if (minZ < -1e-9) log.Fail($"block {g.Key} reaches {minZ:0.###} m below ground, beyond groundSnap; not moved");
         }
 
-        // Until the union step exists, each object becomes one shell.
+        // 5. Union as a 2.5D height field: merges stacked floors, overlaps and touching walls; one shell per footprint.
+        var union = new HeightFieldUnion(solids, tol.Weld, tol.MinEdge).Run();
+        foreach (var p in union.Problems) log.Fail(p);
+        foreach (var (from, to, faces) in union.FlushedSteps)
+            log.Op("flushRoofStep", count: faces, extra: new Dictionary<string, object>
+            {
+                ["from_m"] = from, ["to_m"] = to, ["minEdge_m"] = tol.MinEdge,
+            });
+        if (union.Shells.Count == 0)
+        {
+            log.Fail("union produced no shell; writing each object as its own shell instead");
+            return PerObjectShells(solids, log);
+        }
+        foreach (var g in solids.Select((s, i) => (s, i)).GroupBy(p => p.s.Block).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            var objs = g.ToList();
+            if (objs.Count > 1 && objs.Select(p => union.SolidShell[p.i]).Distinct().Count() == 1)
+                log.Op("mergeStackedFloors", block: g.Key, count: objs.Count);
+        }
+        for (var i = 0; i < union.Shells.Count; i++)
+            if (union.Shells[i].Blocks.Count > 1)
+                log.Op("unionBlocks", count: union.Shells[i].Blocks.Count,
+                    extra: new Dictionary<string, object> { ["shell"] = $"shell_{i:000}", ["blocks"] = union.Shells[i].Blocks });
+        log.Op("rebuildShells", count: union.Shells.Count);
+        var shells = union.Shells;
+        for (var i = 0; i < shells.Count; i++)
+        {
+            var check = ShellCheck.Check(shells[i].Vertices, shells[i].Triangles);
+            if (!check.Ok) log.Fail($"shell_{i:000}: not a valid closed shell ({check})");
+        }
+        return shells;
+    }
+
+    /// <summary>Fallback output: each object as its own shell (status is partial whenever this is used).</summary>
+    private static List<OutputShell> PerObjectShells(List<Solid> solids, RepairLog log)
+    {
         var shells = new List<OutputShell>();
         foreach (var s in solids)
         {

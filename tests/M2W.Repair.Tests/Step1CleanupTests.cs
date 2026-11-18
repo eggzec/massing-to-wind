@@ -52,7 +52,7 @@ public class Step1CleanupTests
             o.Faces.Add(new Face(idx));
         }
         var outcome = TestMeshes.Repair(m);
-        Assert.Equal(RepairStatus.Repaired, outcome.Report.Status);
+        Assert.True(outcome.Report.Status == RepairStatus.Repaired, string.Join(" | ", outcome.Report.Warnings));
         var weld = outcome.Report.Operations.Single(x => x.Op == "weld");
         Assert.Equal(24 - 8, weld.Count);
         Assert.Equal(8, outcome.Repaired!.Vertices.Count);

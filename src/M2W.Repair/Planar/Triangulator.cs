@@ -79,7 +79,110 @@ public static class Triangulator
                 if (!Bridge(head, hh, pending, eps)) return false;
             }
         }
+        var ringNodes = Walk(head).ToList();
+        if (ringNodes.Count <= OptimalMaxVertices && TryOptimal(ringNodes, result, eps)) return true;
+        result.Clear();
         return Clip(head, result, eps);
+    }
+
+    /// <summary>Polygons up to this many vertices (after hole bridging) get the optimal triangulation.</summary>
+    public const int OptimalMaxVertices = 150;
+
+    /// <summary>
+    /// Optimal triangulation by dynamic programming over valid diagonals: maximises the smallest triangle quality
+    /// (then the sum). Unlike greedy ear clipping it cannot strand a run of nearly collinear vertices at the end,
+    /// which would force near-zero-area triangles.
+    /// </summary>
+    private static bool TryOptimal(List<Node> ring, List<Tri> result, double eps)
+    {
+        var n = ring.Count;
+        var p = ring.Select(r => r.P).ToArray();
+        var ok = new bool[n, n];
+        for (var i = 0; i < n; i++)
+        {
+            ok[i, (i + 1) % n] = ok[(i + 1) % n, i] = true;
+            for (var j = i + 2; j < n; j++)
+            {
+                if (i == 0 && j == n - 1) continue;
+                ok[i, j] = ok[j, i] = ValidDiagonal(p, i, j, eps);
+            }
+        }
+        var bestMin = new double[n, n];
+        var bestSum = new double[n, n];
+        var choice = new int[n, n];
+        for (var len = 2; len < n; len++)
+            for (var i = 0; i + len < n; i++)
+            {
+                var j = i + len;
+                bestMin[i, j] = double.NegativeInfinity;
+                choice[i, j] = -1;
+                if (!ok[i, j]) continue;
+                for (var k = i + 1; k < j; k++)
+                {
+                    if (!ok[i, k] || !ok[k, j]) continue;
+                    if (k - i >= 2 && choice[i, k] < 0) continue;
+                    if (j - k >= 2 && choice[k, j] < 0) continue;
+                    if (P2.Orient(p[i], p[k], p[j]) <= eps) continue;
+                    var q = Quality(p[i], p[k], p[j]);
+                    var m = q;
+                    var sum = q;
+                    if (k - i >= 2) { m = Math.Min(m, bestMin[i, k]); sum += bestSum[i, k]; }
+                    if (j - k >= 2) { m = Math.Min(m, bestMin[k, j]); sum += bestSum[k, j]; }
+                    if (m > bestMin[i, j] + 1e-12 || (Math.Abs(m - bestMin[i, j]) <= 1e-12 && sum > bestSum[i, j]))
+                    {
+                        bestMin[i, j] = m; bestSum[i, j] = sum; choice[i, j] = k;
+                    }
+                }
+            }
+        if (choice[0, n - 1] < 0) return false;
+        var stack = new Stack<(int, int)>();
+        stack.Push((0, n - 1));
+        while (stack.Count > 0)
+        {
+            var (i, j) = stack.Pop();
+            if (j - i < 2) continue;
+            var k = choice[i, j];
+            result.Add(new Tri(ring[i].Index, ring[k].Index, ring[j].Index));
+            stack.Push((i, k));
+            stack.Push((k, j));
+        }
+        return true;
+    }
+
+    /// <summary>True if the segment between ring vertices i and j lies strictly inside the polygon.</summary>
+    private static bool ValidDiagonal(P2[] p, int i, int j, double eps)
+    {
+        var n = p.Length;
+        var a = p[i]; var b = p[j];
+        if (a == b) return false;
+        if (!InCone(p[(i - 1 + n) % n], a, p[(i + 1) % n], b, eps)) return false;
+        if (!InCone(p[(j - 1 + n) % n], b, p[(j + 1) % n], a, eps)) return false;
+        for (var k = 0; k < n; k++)
+        {
+            var c = p[k]; var d = p[(k + 1) % n];
+            var o1 = P2.Orient(a, b, c); var o2 = P2.Orient(a, b, d);
+            var o3 = P2.Orient(c, d, a); var o4 = P2.Orient(c, d, b);
+            if (((o1 > eps && o2 < -eps) || (o1 < -eps && o2 > eps)) && ((o3 > eps && o4 < -eps) || (o3 < -eps && o4 > eps)))
+                return false;
+            // A vertex on the open diagonal (other than copies of its own ends) blocks it.
+            if (c != a && c != b && Math.Abs(o1) <= eps && StrictlyBetween(a, b, c)) return false;
+        }
+        return true;
+    }
+
+    private static bool StrictlyBetween(P2 a, P2 b, P2 c)
+    {
+        var d = b - a;
+        var t = P2.Dot(c - a, d);
+        return t > 0 && t < P2.Dot(d, d);
+    }
+
+    /// <summary>True if q lies strictly inside the interior angle prev-v-next of a counter-clockwise ring.</summary>
+    private static bool InCone(P2 prev, P2 v, P2 next, P2 q, double eps)
+    {
+        var leftIn = P2.Orient(prev, v, q) > eps;
+        var leftOut = P2.Orient(v, next, q) > eps;
+        return P2.Orient(prev, v, next) > eps ? leftIn && leftOut : leftIn || leftOut;
     }
 
     private static Node Ring(IReadOnlyList<P2> pts, int offset, bool counterClockwise)

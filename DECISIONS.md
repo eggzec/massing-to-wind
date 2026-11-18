@@ -24,6 +24,41 @@ Template:
   also keeps tolerances under the solver's control.
 - Revisit if: offsetting for `smallGap` (M4) turns out too costly to write; then ask the owner about Clipper2.
 
+## D-029 · 2026-11-19 · solver (M3) · Output is rebuilt as a 2.5D height field, not a mesh boolean
+- Context: stacked floors, overlaps and touching walls all need a union of closed solids that gives clean closed
+  shells, with coincident faces, crossings and mm-level misalignment.
+- Choice: union in plan. Each object's horizontal faces give tagged level boundaries; these are planarised, plan
+  faces are labelled by tag parity, and each face gets the highest roof over it, filled down to the ground. Shells
+  are rebuilt from the plan (ground face, roofs, walls with split columns). Walls of the input are not used.
+- Alternatives: 3D mesh booleans (triangle-triangle intersection, re-triangulation); voxels; footprint union per
+  height band followed by stitching bands together.
+- Why: in plan, coincident faces and crossings are a 2D problem with one tolerance; parity labelling needs no input
+  orientation; building shells from the plan makes them closed by construction. The generator's expected answer
+  and AGREEMENT.md's output rules (closed bottom at Z = 0) are 2.5D as well.
+- Limits: sloped or overhanging geometry is not represented (reported `partial`); anything floating beyond
+  `groundSnap` is filled down to the ground (reported `partial`).
+- Revisit if: hidden cases contain sloped roofs or real overhangs (would need a 3D boolean or a sloped-roof
+  height field).
+
+## D-030 · 2026-11-19 · solver (M3) · Roof steps lower than `minEdge` between neighbours are raised to the higher roof
+- Context: two neighbouring roofs at 17.4 and 17.5 m leave a 0.1 m wall step, i.e. edges shorter than `minEdge`
+  (0.25 m), which AGREEMENT.md says are collapsed.
+- Choice: faces that share a plan edge and differ in height by less than `minEdge` are grouped; each group takes its
+  highest roof. Only adjacent faces change.
+- Alternatives: lower to the lower roof; area-weighted height; snap all levels globally within `minEdge`.
+- Why: raising keeps the true maximum height (graded to 0.01 m) and changes volume by at most step × roof area;
+  global snapping would wrongly change the height of separate blocks.
+- Revisit if: a case needs the lower roof kept (the volume change would show it).
+
+## D-031 · 2026-11-19 · solver (M3) · Optimal triangulation for roofs up to 150 vertices
+- Context: greedy ear clipping stranded nearly collinear vertices (B03's corners on B02's roof edge) and was forced
+  into near-zero-area triangles, which the checker counts as self-intersections.
+- Choice: dynamic programming over valid diagonals that maximises the smallest triangle angle (tie: larger sum).
+  Holes are bridged first. Ear clipping (strict ears only) stays as the fallback above 150 vertices.
+- Alternatives: constrained Delaunay triangulation; dropping collinear vertices (leaves T-junctions).
+- Why: exact, short, and roof polygons are small (O(n³) is cheap at this size).
+- Revisit if: roofs get much larger (then implement constrained Delaunay).
+
 ## D-028 · 2026-11-19 · solver (M3) · `runtime_ms` is measured, so report.json is not byte-identical run to run
 - Context: CLAUDE.md asks for byte-identical output; AGREEMENT.md asks for `runtime_ms`.
 - Choice: `repaired.obj` is byte-identical for the same input (tested); `report.json` differs only in `runtime_ms`.
