@@ -13,6 +13,82 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-015 · 2026-11-18 · checker (M2) · Shape of `result.json` entries
+- Context: AGREEMENT.md gives `name/pass/value/limit` and says `watertight` value = free edges, nothing more.
+- Choice: always the same 15 checks in the same order (`CheckNames.All`). Count checks (`parse`, `watertight`,
+  `manifold`, `outwardNormals`, `euler`, `noSelfIntersections`, `mustMerge`, `mustStaySeparate`): value = number of
+  violations, limit 0. `minGap_m`, `minEdge_m`: value = measured minimum, limit = expected. `shellCount`: count vs
+  expected. `volume_m3`, `footprintArea_m2`, `maxHeight_m`: value/limit of the worst shell. `groundContact`: value =
+  largest |lowest Z|, limit = weld. Each entry has a `detail` string (kept in `CheckEntry.Extra`, no schema change).
+  If `repaired.obj` does not parse, `parse` fails and every other check fails with "not checked". `minGap_m` with
+  fewer than two shells passes with value 0 and says so. `expected.json` `checks.watertight/outwardNormals/
+  noSelfIntersections = false` → still measured and reported, but not enforced.
+- Alternatives: one entry per shell per check; omit checks that cannot run.
+- Why: stable names make `summary.json` `failedChecks` comparable across cases; detail keeps it debuggable.
+- Revisit if: the owner wants per-shell entries.
+
+## D-014 · 2026-11-18 · checker (M2) · Numeric tolerances inside the checker
+- Context: exact geometry tests need a "touching" threshold, and the OBJ format rounds to 6 decimals.
+- Choice: `Geom.TouchTol` = 1e-8 m for intersection/contact. `minGap_m` and `minEdge_m` pass at `limit − 1e-6`
+  (one unit of the 6th decimal: a length on the limit can read back that much short). `groundContact` uses
+  `case.json` `weld`. Volume/area/height use exactly the `expected.json` tolerances.
+- Alternatives: no slack (an on-limit 1.0 m gap could fail by 1e-7); slack = `weld` (too generous: 1 mm).
+- Why: strict where the agreement is strict, never stricter than the file format can represent. None of these is
+  an AGREEMENT.md tolerance default.
+- Revisit if: OBJ precision changes.
+
+## D-013 · 2026-11-18 · checker (M2) · Footprint and height definitions
+- Context: AGREEMENT.md names `footprintArea_m2` and `maxHeight_m` without defining them.
+- Choice: footprint = plan area of the downward-facing triangles lying at the shell's lowest Z (within `weld`), i.e.
+  the closed bottom face; height = highest Z (ground is Z = 0). Measured at the shell's own base so a floating
+  shell fails `groundContact` only, not also footprint.
+- Alternatives: area of the shell's projection onto the ground (differs only for overhangs/cantilevers).
+- Why: matches "every shell has a closed bottom face at Z = 0" and the case_0007 example (303 m²).
+- Revisit if: the generator computes plan projection for blocks with overhangs (owner question in PROGRESS.md).
+
+## D-012 · 2026-11-18 · checker (M2) · Locating input blocks in repaired shells (mustMerge / mustStaySeparate)
+- Context: groups name input blocks (`B01`), but output objects are `shell_NNN`; the solver's naming says nothing.
+- Choice: read `input.obj`, subtract `origin`, group objects by block (`B01_F03` → `B01`). Each block's vertices
+  and face centres vote for the repaired shell whose solid is nearest (0 inside, by winding number), if within
+  `minGap + groundSnap + minEdge` of it. A point equally near two shells (within 1e-6 m, e.g. on a shared wall)
+  does not vote. Most votes wins; ties go to the lowest shell index; no votes = "not found" = group violated.
+  `input.obj` is read only when there are groups.
+- Alternatives: trust object order or the solver's report (not allowed); block centroid only (fails for L/U
+  shapes and moved blocks).
+- Why: purely positional, so it cannot be gamed by naming, and it survives the legitimate moves a repair makes
+  (ground snap, gap closing, short-edge collapse).
+- Revisit if: a fault moves a block further than that distance.
+
+## D-011 · 2026-11-18 · checker (M2) · Matching expected shells to repaired shells (pending owner)
+- Context: the brief says "match shells by position", but `expected.json` shells carry no position.
+- Choice: minimum-cost assignment (Hungarian method): cost = volume, footprint and height errors in tolerance
+  units plus 1 per genus mismatch. Unmatched expected shells fail the measure checks; extra repaired shells fail
+  `shellCount`. `euler` compares each matched shell with its expected genus.
+- Alternatives: file order (meaningless); add a position or block list to each expected shell (JSON field change:
+  escalated, see PROGRESS.md).
+- Why: works with the locked schema; a wrong repair cannot pass by being matched to a "better" shell because every
+  expected shell must be within tolerance of a distinct repaired shell.
+- Revisit if: the owner approves a `blocks` field per expected shell; then match by block location (D-012).
+
+## D-010 · 2026-11-18 · checker (M2) · Self-intersection scope and adjacency
+- Context: "no two non-adjacent triangles intersect" leaves out folds between triangles that do share vertices.
+- Choice: per shell (contact between shells is `minGap_m`). Broad phase: sweep and prune on X over triangle boxes.
+  Narrow phase by shared vertex indices: 0 → any contact (exact segment/triangle tests); 1 → the opposite edges,
+  or the edges leaving the shared vertex (minus 0.1 mm next to it), touch the other triangle; 2 → coplanar fold
+  onto the same side of the shared edge; 3 → duplicate face.
+- Alternatives: skip all adjacent pairs (misses folds); uniform 3D grid (large roof triangles span many cells).
+- Why: correctness first; 21,600 triangles grade in about 3 s.
+- Revisit if: hidden cases are much larger (then switch to a BVH).
+
+## D-009 · 2026-11-18 · checker (M2) · Topology by vertex index; checker does not weld
+- Context: two vertices at the same position with different indices could be treated as one or two.
+- Choice: by index. A shell is one `o` object; `watertight`, `manifold`, `outwardNormals` and `euler` use its
+  faces' vertex indices. Duplicate positions are therefore free edges, which is the `duplicateVertices` fault the
+  solver must fix. Polygons are fan-triangulated for analysis (and fail `parse`).
+- Alternatives: weld coincident positions within `weld` before checking.
+- Why: the wind mesher sees indices; welding in the checker would hide an unrepaired fault.
+- Revisit if: the owner says output may legitimately contain duplicate positions.
+
 ## D-008 · 2026-11-18 · shared (M1) · `.gitattributes` forces LF for `*.sh`, `*.obj`, `*.json`
 - Context: with `core.autocrlf=true` and no `.gitattributes`, Windows checkouts got CRLF; `check-locks.sh` then
   failed in bash (`set: pipefail\r: invalid option name`) and the example OBJ was CRLF despite AGREEMENT.md saying LF.

@@ -1,0 +1,74 @@
+using M2W.Geometry;
+
+namespace M2W.Checker;
+
+/// <summary>
+/// One output object (<c>o shell_NNN</c>) as a list of triangles over the mesh's shared vertices.
+/// Topology is by vertex index: two vertices at the same position but with different indices are different
+/// vertices (welding is the solver's job; see DECISIONS.md).
+/// </summary>
+public sealed class Shell
+{
+    public Shell(string name, IReadOnlyList<Vec3> vertices, IReadOnlyList<(int A, int B, int C)> triangles)
+    {
+        Name = name;
+        Vertices = vertices;
+        Triangles = triangles;
+        Tris = triangles.Select(t => new Tri(vertices[t.A], vertices[t.B], vertices[t.C])).ToArray();
+        TriBounds = Tris.Select(t => t.Bounds).ToArray();
+        Bounds = TriBounds.Count == 0 ? new Box(Vec3.Zero, Vec3.Zero) : TriBounds.Aggregate(Box.Union);
+    }
+
+    public string Name { get; }
+    public IReadOnlyList<Vec3> Vertices { get; }
+    public IReadOnlyList<(int A, int B, int C)> Triangles { get; }
+    public IReadOnlyList<Tri> Tris { get; }
+    public IReadOnlyList<Box> TriBounds { get; }
+    public Box Bounds { get; }
+
+    public IEnumerable<int> UsedVertices => Triangles.SelectMany(t => new[] { t.A, t.B, t.C }).Distinct();
+
+    public double SignedVolume
+    {
+        get
+        {
+            if (Tris.Count == 0) return 0;
+            var c = (Bounds.Min + Bounds.Max) * 0.5; // keeps precision away from the origin
+            double six = 0;
+            foreach (var t in Tris) six += Vec3.Dot(t.A - c, Vec3.Cross(t.B - c, t.C - c));
+            return six / 6.0;
+        }
+    }
+
+    /// <summary>
+    /// Winding number of the shell around <paramref name="p"/>: ≈1 inside a closed outward shell, ≈0 outside.
+    /// </summary>
+    public double Winding(Vec3 p)
+    {
+        double w = 0;
+        foreach (var t in Tris) w += Geom.SolidAngleFraction(p, t);
+        return w;
+    }
+
+    /// <summary>Distance from <paramref name="p"/> to the shell's surface.</summary>
+    public double SurfaceDistance(Vec3 p, double stopBelow = 0)
+    {
+        var best = double.PositiveInfinity;
+        for (var i = 0; i < Tris.Count; i++)
+        {
+            if (Box.Distance(TriBounds[i], p) >= best) continue;
+            best = Math.Min(best, Geom.PointTriangleDistance(p, Tris[i]));
+            if (best <= stopBelow) break;
+        }
+        return best;
+    }
+
+    /// <summary>Distance from <paramref name="p"/> to the solid the shell encloses (0 on or inside it).</summary>
+    public double SolidDistance(Vec3 p)
+    {
+        var d = SurfaceDistance(p, Geom.TouchTol);
+        if (d <= Geom.TouchTol) return 0;
+        if (Box.Distance(Bounds, p) > 0) return d; // outside the box, so outside the solid
+        return Math.Abs(Winding(p)) > 0.5 ? 0 : d;
+    }
+}
