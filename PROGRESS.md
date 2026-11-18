@@ -4,26 +4,29 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-- **2026-11-18 · M1 · summary.json layout.** AGREEMENT.md does not define `out/summary.json`. I used the layout in
-  DECISIONS.md D-004 (`casesTotal`, `casesPassed`, `byFault{total,passed}`, per-case rows). Approve as is, or add it
-  to AGREEMENT.md? Not blocking; nothing depends on it beyond `validate` printing it.
-- **2026-11-18 · M1 · `partial` exit code.** AGREEMENT.md gives `repair` exit 0 = repaired, 1 = failed, and does not
-  mention `partial`. I return 1 for `partial` (D-006). Confirm? Not blocking.
-- **2026-11-18 · M1 · "stubs allowed for repair".** `generate` and `check` are wired but print "not implemented yet"
-  and exit 2, because the generator and checker are M2 work and I was told not to start M2. Is that acceptable for
-  the M1 gate? Not blocking.
+- (none)
 
 ## Current status
 
 | Milestone | Status | Pass rate | Last updated |
 | --- | --- | --- | --- |
-| M1 Foundations | Done, awaiting gate | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
+| M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | Not started | — | — |
 | M3 Core repair | Not started | — | — |
 | M4 Hard faults | Not started | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-18 · owner · M1 gate
+- Changed: M1 approved. `m1/foundations` fast-forwarded into `main` and tagged `lock-v0.1` (commit `0b79d96`);
+  `AGREEMENT.md` and `LOCKS` are now locked. Role branches `gen/m2`, `check/m2`, `solve/m3` created from `main`.
+- Owner answers (all approved as proposed): `summary.json` layout per D-004; `partial` → `repair` exit 1 per D-006;
+  `generate` and `check` may stay stubs (exit 2 "not implemented yet") until M2.
+- validate: build ✅ · tests 113/113 · cases passing 0/1 (expected until M2/M3) · locks OK · **VALIDATE: GREEN**.
+- Next: M2. Generator on `gen/m2` implements `ICaseGenerator`; checker on `check/m2` implements `ICaseChecker`
+  (see `src/M2W.Geometry/README.md`, "How a role plugs into m2w").
+- Blockers: none.
 
 ### 2026-11-18 · shared (M2W.Geometry, M2W.Cli) · M1 Foundations
 - Changed:

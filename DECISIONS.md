@@ -42,6 +42,7 @@ Template:
 - Alternatives: `run-all` exits 1 if any case fails (would make `validate` red until every case passes).
 - Why: `run-all` is the harness; pass rates live in summary.json, which validate prints. `partial` is not a full repair.
 - Revisit if: the owner wants CI to fail on a pass-rate threshold (add a `--min-pass` option rather than changing 0).
+- Owner approved at the M1 gate (2026-11-18), including `partial` → 1 and stub `generate`/`check` until M2.
 
 ## D-005 · 2026-11-18 · shared (M1) · m2w deletes stale output before each run
 - Context: if a solver stops writing `repaired.obj`, an old copy in `out/<caseId>/` would still be graded.
@@ -60,7 +61,7 @@ Template:
 - Alternatives: read faults from `cases/index.json` (does not exist yet; per-case files are always present);
   let the checker write it (the checker brief says so, but there is no checker in M1).
 - Why: works today and in M2 without depending on index.json; per-case rows make failures easy to find.
-- Revisit if: the owner wants this layout in AGREEMENT.md (question in PROGRESS.md), or the checker takes it over.
+- Revisit if: the checker takes it over. (Owner approved this layout at the M1 gate, 2026-11-18.)
 
 ## D-003 · 2026-11-18 · shared (M1) · Roles plug into m2w through interfaces found by reflection
 - Context: three roles on three branches all need `m2w` to call their code. If each edits `Program.cs`, every
