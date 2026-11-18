@@ -4,12 +4,7 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-- **2026-11-18 · generator · lock check can falsely skip (shared `scripts/`, not changed).** On this machine
-  `validate.ps1` calls `bash` = WSL bash. Inside a git *worktree* WSL's git cannot follow the `.git` file (it holds a
-  Windows path), so `check-locks.sh` sees "not a git repository", reports `locks: no lock-v0.1 tag yet, skipping`
-  and validate stays GREEN. `scripts/validate.sh` under Git Bash checks properly (`locks: OK`). Suggested fix (owner or
-  shared work): in `check-locks.sh`, exit 1 when `git rev-parse --git-dir` fails, and skip only when that works but
-  the tag is missing; or have `validate.ps1` call Git for Windows' bash explicitly.
+_(none open)_
 
 ## Current status
 
@@ -22,6 +17,20 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-18 · owner · lock check no longer skips silently (shared `scripts/`)
+- Fixes the generator's "Waiting for owner" item (removed). `scripts/check-locks.sh` exits 1 when git cannot read
+  the repository, and prints git's error. A failing `git diff` / `git ls-files` also exits 1. A missing tag still
+  skips, now with a `WARNING`. `scripts/validate.ps1` runs the lock check with Git for Windows' bash (found next to
+  `git.exe`), never WSL, and fails the step if that bash is missing. D-026.
+- Verified: WSL bash in a scratch worktree, which used to skip and pass, now reports `locks: FAIL — git cannot read
+  this repository` (exit 1). Git Bash in the same worktree reports `locks: OK`. In the main checkout, an edit to
+  `src/M2W.Checker/Geom.cs` and an untracked `cases/probe.txt` each fail and are named; both reverted.
+- validate (`scripts/validate.ps1`, now safe to use on Windows): build ✅ (0 errors) · tests 2403/2403 (Geometry
+  88, Cli 31, Generator 2198, Checker 86) · cases passing 0/291 (stub solver, expected until M3) · locks OK ·
+  **VALIDATE: GREEN**.
+- Next: fast-forward `solve/m3` to `main`, generate the hidden cases, then start M3.
+- Blockers: none.
 
 ### 2026-11-18 · owner · M2 gate
 - Approved. `check/m2` (which already contains all of `gen/m2`) fast-forwarded into `main`. Commit `6eac5c9`

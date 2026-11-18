@@ -13,6 +13,18 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-026 · 2026-11-18 · owner (pre-M3) · The lock check fails when it cannot use git; validate.ps1 uses Git Bash
+- Context: on Windows, plain `bash` is WSL bash. Inside a git worktree, WSL's git cannot follow the `.git` file
+  (it holds a Windows path), so `check-locks.sh` read that as "no lock-v0.1 tag", skipped, and validate stayed GREEN.
+- Choice: `check-locks.sh` first runs `git rev-parse --git-dir` and exits 1, printing git's error, if that
+  fails. A failing `git diff` / `git ls-files` also exits 1. A missing tag in a readable repository still skips,
+  but now prints `WARNING`. `validate.ps1` finds `bash.exe` next to `git.exe` (Git for Windows) and fails the
+  locks step if it cannot find it, rather than falling back to WSL.
+- Alternatives: also fail when the tag is missing (rejected for now: a fresh CI checkout without tags would go RED
+  for the wrong reason; revisit with M5 CI, using `fetch-tags`); support WSL by rewriting the `.git` path (fragile).
+- Why: a lock check that cannot run must never look like a passing one.
+- Revisit if: M5 CI is set up. Then make a missing tag fail too, once CI fetches tags.
+
 ## D-025 · 2026-11-18 · owner (M2, checker Q3) · Thin slivers are not graded in v0.1
 - Context: after zero repair, 16 of 30 `sliver` cases pass every check, because no check looks at triangle angles
   (the zero-area slivers are caught by `noSelfIntersections`).
