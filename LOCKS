@@ -4,7 +4,7 @@
 
 AGREEMENT.md
 LOCKS
-# After M2 gate, uncomment:
-# cases/
-# src/M2W.Checker/
-# tests/M2W.Checker.Tests/
+# Locked at the M2 gate (2026-11-18):
+cases/
+src/M2W.Checker/
+tests/M2W.Checker.Tests/

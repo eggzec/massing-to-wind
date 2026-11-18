@@ -90,7 +90,7 @@ Example: block B01 (20 × 10 m) is emitted as six stacked 3 m floors, and block 
     "shellCount": 1,
     "shells": [
       { "volume_m3": 5454.0, "footprintArea_m2": 303.0,
-        "maxHeight_m": 18.0, "genus": 0 }
+        "maxHeight_m": 18.0, "genus": 0, "blocks": ["B01", "B02"], "anchor_m": [10.0, 5.0] }
     ],
     "mustMerge": [["B01", "B02"]],
     "mustStaySeparate": []
@@ -105,6 +105,8 @@ Example: block B01 (20 × 10 m) is emitted as six stacked 3 m floors, and block 
 ```
 
 `genus` is the number of through-holes, such as courtyards. The checker tests it with the Euler number: V − E + F = 2 − 2 × genus for each shell.
+
+Each entry in `expected.shells` may also carry `blocks` (the input block names in that shell, e.g. `["B01", "B02"]`) and `anchor_m` (`[x, y]` in local coordinates, strictly inside the shell's footprint). The checker matches a repaired shell to an expected one by which shell contains the anchor in plan. `footprintArea_m2` is the area of the shell's bottom face at z = 0.
 
 ## Solver report and checker result
 
