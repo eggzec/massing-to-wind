@@ -4,6 +4,20 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
+- **2026-11-18 · checker · Q3: should the checker grade slivers (minimum triangle angle)?** The checker grades
+  each generated case after zero repair (origin shift plus triangulation only). For `sliver`, 16 of 30 cases pass
+  every check untouched. Those are the thin slivers (smallest angle 0.07°–0.7°). The zero-area slivers are already
+  caught by `noSelfIntersections`. A solver can therefore ignore thin slivers and still score. None of the 15 checks
+  in the brief or MILESTONES looks at angles, although AGREEMENT.md defines `minAngleDeg` ("faces with a smaller
+  angle count as slivers") and lists `sliver` as a fault to fix. Every other fault is caught: 0 cases pass untouched
+  except farCoordinates (the origin shift is the fix) and above-threshold smallGap (staying apart is the answer).
+  **Option A (recommended):** add a 16th check, `minAngle_deg`: smallest triangle angle ≥ `case.json` `minAngleDeg`.
+  The generator's answers and clean controls meet it (smallest angle 14.3° in the clean controls). The catch: a
+  long, low wall (e.g. 60 m × 3 m, diagonal 2.9°) cannot be split into two triangles above 5°, so solvers must
+  insert extra vertices there.
+  **Option B:** leave it as is and document that thin slivers are not graded in v0.1 (KNOWN_LIMITATIONS.md).
+  Your call: this changes what the checker grades before it is locked. Until you decide I will not add the check.
+
 - **2026-11-18 · generator · AGREEMENT.md text for the approved `blocks` / `anchor_m` fields (D-017).** AGREEMENT.md
   is locked, so I did not edit it. Suggested addition under **`expected.json`**, after the example:
 
@@ -27,12 +41,39 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | Milestone | Status | Pass rate | Last updated |
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
-| M2 Test cases and checker | In progress: generator done (290 cases); checker done, anchor matching in progress | 0/291 (stub solver, expected) | 2026-11-18 |
+| M2 Test cases and checker | Generator and checker done; 10/10 generated clean controls pass with zero repair; 1 owner question (Q3) | 0/291 (stub solver, expected) | 2026-11-18 |
 | M3 Core repair | Not started | — | — |
 | M4 Hard faults | Not started | — | — |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-18 · checker · M2 checker: anchor matching, generated cases, a self-intersection fix
+- Merged `gen/m2` into `check/m2` (merge commit). The checker's decisions were renumbered D-018 to D-024, because
+  the generator had already used D-009 to D-017.
+- Q1 answered (owner-approved `anchor_m` and `blocks`, generator D-017): expected shells are now matched by anchor
+  (D-020). A shell with an anchor can only pair with a repaired shell that contains it in plan. Best fit remains
+  the fallback for files without anchors. New tests: anchors catch a repair that swaps two blocks' sizes, which
+  best fit would accept; an anchor outside every shell, or two anchors in one merged shell, leaves an expected
+  shell unmatched; plan containment excludes a courtyard. Q2 answered: the generator's footprint is the same
+  bottom-face area, and no case can differ (D-022).
+- **Clean controls (M2 criterion):** all 10 generated clean controls pass all 15 checks with zero repair, graded
+  through `CaseChecker` from files. All 290 generated cases grade without error in about 17 s.
+- **Checker bug found and fixed:** grading the generated cases after zero repair showed 3 above-threshold smallGap
+  cases failing `noSelfIntersections` with no real intersection. Rotated plots with mm-rounded coordinates give
+  valid, nearly flat triangle fans (3e-8 rad), and the shared-vertex test (cut 0.1 mm, then measure distance)
+  read them as contact. It is replaced by an exact angular test (D-019), with a regression test confirmed to fail
+  on the old code. The checker was stricter than the agreement there; it no longer is.
+- Zero repair passes per fault, now fully explained: farCoordinates 20/31 (the 20 single-fault cases: the origin
+  shift is the fix) · smallGap 10/31 (the 10 above-threshold ones: staying apart is the answer) · sliver 16/30
+  (thin slivers: no check looks at angles; owner Q3) · every other fault 0.
+- validate (`scripts/validate.sh`, Git Bash): build ✅ (0 warnings) · tests 2403/2403 (Geometry 88, Cli 31,
+  Generator 2198, Checker 86) · cases passing 0/291 (stub solver, expected until M3) · locks OK ·
+  **VALIDATE: GREEN**.
+- M2 checker criteria: all checks ✅ · unit tests on good and bad meshes ✅ · clean controls pass with zero repair ✅
+  (10/10 generated, 7 hand-built). Ready for the owner's M2 gate once Q3 is decided.
+- Next: Q3 (add a minimum-angle check or document the limit), then the owner's 5-case eye check and the M2 lock.
+- Blockers: none. One owner question (Q3).
 
 ### 2026-11-18 · checker · M2 checker
 - Changed (`src/M2W.Checker`, `tests/M2W.Checker.Tests` only):

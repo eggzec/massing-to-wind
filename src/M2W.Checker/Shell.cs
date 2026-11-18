@@ -63,6 +63,27 @@ public sealed class Shell
         return best;
     }
 
+    /// <summary>
+    /// True if the plan point (x, y) lies under or over the shell: some triangle's projection onto the ground
+    /// covers it (edges included). For a closed shell this is "inside its plan outline".
+    /// </summary>
+    public bool ContainsInPlan(double x, double y)
+    {
+        for (var i = 0; i < Tris.Count; i++)
+        {
+            var b = TriBounds[i];
+            if (x < b.Min.X || x > b.Max.X || y < b.Min.Y || y > b.Max.Y) continue;
+            var t = Tris[i];
+            var d = (t.B.X - t.A.X) * (t.C.Y - t.A.Y) - (t.B.Y - t.A.Y) * (t.C.X - t.A.X);
+            if (d == 0) continue; // vertical triangle (wall): covers no plan area
+            var u = ((t.B.X - x) * (t.C.Y - y) - (t.B.Y - y) * (t.C.X - x)) / d;
+            var v = ((t.C.X - x) * (t.A.Y - y) - (t.C.Y - y) * (t.A.X - x)) / d;
+            var w = 1 - u - v;
+            if (u >= 0 && v >= 0 && w >= 0) return true;
+        }
+        return false;
+    }
+
     /// <summary>Distance from <paramref name="p"/> to the solid the shell encloses (0 on or inside it).</summary>
     public double SolidDistance(Vec3 p)
     {

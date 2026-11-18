@@ -245,6 +245,18 @@ public class CheckTests
         Assert.True(SelfIntersection.PairIntersects(lying, 0, 1));
     }
 
+    [Theory]
+    [InlineData(-1.5e-7, false)] // wall foot 3e-8 rad outside the floor triangle's corner: valid, nearly flat fan
+    [InlineData(1.5e-7, true)]   // wall foot runs across the floor triangle
+    public void Self_intersection_judges_a_nearly_collinear_corner_by_angle(double offset, bool intersects)
+    {
+        // Regression: rotated plots with mm-rounded coordinates give corners like this (case_0195). An earlier
+        // version cut 0.1 mm off the edge and measured distance, which flagged the valid one.
+        var v = new List<Vec3> { new(0, 0, 0), new(10, 0, 0), new(0, 10, 0), new(5, offset, 0), new(5, offset, 3) };
+        var s = new Shell("shell_000", v, new List<(int, int, int)> { (0, 1, 2), (0, 3, 4) });
+        Assert.Equal(intersects, SelfIntersection.PairIntersects(s, 0, 1));
+    }
+
     [Fact]
     public void Self_intersection_passes_non_convex_blocks()
     {
@@ -386,6 +398,53 @@ public class CheckTests
         var m = Boxes((0, 0, 0, 10, 10, 30), (20, 0, 0, 40, 10, 9));
         var r = Grade(m, Expect(new[] { BoxShell(20, 10, 9), BoxShell(10, 10, 30) }));
         Assert.True(r.Pass, r.Failed());
+    }
+
+    [Fact]
+    public void Anchors_catch_a_repair_that_best_fit_would_accept()
+    {
+        // Expected: a 10 m block at x 0..10 and an 11 m block at x 50..60. The repair swapped the heights.
+        var swapped = Boxes((0, 0, 0, 10, 10, 11), (50, 0, 0, 60, 10, 10));
+        var noAnchors = Expect(new[] { Sh(1000, 100, 10), Sh(1100, 100, 11) });
+        Assert.True(Grade(swapped, noAnchors).Pass); // best fit pairs them crosswise
+
+        var anchored = Expect(new[] { Sh(1000, 100, 10, anchor: (5, 5)), Sh(1100, 100, 11, anchor: (55, 5)) });
+        var r = Grade(swapped, anchored);
+        Assert.False(r.Get(CheckNames.Volume).Pass);
+        Assert.False(r.Get(CheckNames.MaxHeight).Pass);
+
+        var right = Boxes((0, 0, 0, 10, 10, 10), (50, 0, 0, 60, 10, 11));
+        Assert.True(Grade(right, anchored).Pass, Grade(right, anchored).Failed());
+    }
+
+    [Fact]
+    public void An_anchor_outside_every_shell_leaves_its_expected_shell_unmatched()
+    {
+        var r = Grade(GoodBox(), Expect(new[] { Sh(1000, 100, 10, anchor: (30, 5)) }));
+        Assert.False(r.Get(CheckNames.Volume).Pass);
+        Assert.Contains("contains its anchor (30, 5)", r.Get(CheckNames.Volume).Detail());
+        Assert.True(r.Get(CheckNames.ShellCount).Pass);
+    }
+
+    [Fact]
+    public void Two_expected_shells_cannot_share_one_repaired_shell()
+    {
+        // The solver merged two blocks that should stay apart: one expected shell is left without a partner.
+        var merged = Boxes((0, 0, 0, 21.5, 10, 10));
+        var r = Grade(merged, Expect(new[] { Sh(1000, 100, 10, anchor: (5, 5)), Sh(1000, 100, 10, anchor: (16.5, 5)) }));
+        Assert.False(r.Get(CheckNames.Volume).Pass);
+        Assert.Contains("no repaired shell left", r.Get(CheckNames.Volume).Detail());
+    }
+
+    [Fact]
+    public void Plan_containment_follows_the_footprint_and_excludes_a_courtyard()
+    {
+        var m = ZeroRepair(Single("B01", (m, o) => AddCourtyardPolygons(m, o, (0, 0, 30, 30), (10, 10, 20, 20), 0, 12)), Vec3.Zero);
+        var s = Shells.Of(m)[0];
+        Assert.True(s.ContainsInPlan(5, 5));    // in the ring
+        Assert.True(s.ContainsInPlan(0, 15));   // on the outer wall line
+        Assert.False(s.ContainsInPlan(15, 15)); // in the courtyard
+        Assert.False(s.ContainsInPlan(35, 5));  // outside
     }
 
     [Fact]

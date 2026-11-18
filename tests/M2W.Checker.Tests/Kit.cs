@@ -259,8 +259,12 @@ internal static class Kit
         Files = new CaseFileNames { Input = "input.obj" },
     };
 
-    public static ExpectedShell Sh(double volume, double footprint, double height, int genus = 0) =>
-        new() { Volume_m3 = volume, FootprintArea_m2 = footprint, MaxHeight_m = height, Genus = genus };
+    public static ExpectedShell Sh(double volume, double footprint, double height, int genus = 0, (double X, double Y)? anchor = null) =>
+        new()
+        {
+            Volume_m3 = volume, FootprintArea_m2 = footprint, MaxHeight_m = height, Genus = genus,
+            Anchor_m = anchor is { } a ? new[] { a.X, a.Y } : null,
+        };
 
     public static ExpectedSpec Expect(IEnumerable<ExpectedShell> shells, string[][]? merge = null, string[][]? apart = null,
         bool watertight = true, bool outward = true, bool noSelf = true, double minGap = 1.0, double minEdge = 0.25)

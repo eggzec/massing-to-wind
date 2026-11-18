@@ -118,10 +118,10 @@ public static class Grader
             list.Add(Count(CheckNames.OutwardNormals, n, items, required.OutwardNormals));
         }
 
-        // Matching expected shells to repaired shells (expected.json gives no positions; see DECISIONS.md).
+        // Matching expected shells to repaired shells: by anchor where expected.json gives one, else best fit (D-020).
         var measures = shells.Select((s, i) => Measure(s, topo[i], volumes[i], spec.Tolerances.Weld)).ToArray();
         var exp = expected.Expected.Shells;
-        var match = Match(exp, measures, expected.Tolerances);
+        var match = Match(exp, measures, expected.Tolerances, shells);
 
         // euler: V − E + F = 2 − 2·genus for each matched shell
         {
@@ -129,7 +129,7 @@ public static class Grader
             for (var e = 0; e < exp.Count; e++)
             {
                 var j = match[e];
-                if (j < 0) continue; // unmatched: shellCount fails
+                if (j < 0) continue; // unmatched: the measure checks fail it
                 var want = 2 - 2 * exp[e].Genus;
                 if (topo[j].Euler != want)
                     items.Add($"{shells[j].Name}: V-E+F = {topo[j].V}-{topo[j].E}+{topo[j].F} = {topo[j].Euler}, expected {want} (genus {exp[e].Genus})");
@@ -291,25 +291,37 @@ public static class Grader
     }
 
     /// <summary>
-    /// For each expected shell, the repaired shell it is compared with (−1: none). Minimises the total of the
-    /// errors measured in tolerance units (volume, footprint, height) plus one per genus mismatch.
+    /// For each expected shell, the repaired shell it is compared with (−1: none), one-to-one. An expected shell
+    /// with an <c>anchor_m</c> may only pair with a repaired shell that contains the anchor in plan (D-017); if none
+    /// does, it stays unmatched. Among the allowed pairs (all pairs for shells without an anchor), the total of the
+    /// errors in tolerance units (volume, footprint, height) plus one per genus mismatch is minimised.
     /// </summary>
-    public static int[] Match(IReadOnlyList<ExpectedShell> exp, IReadOnlyList<ShellMeasure> got, CheckTolerances tol)
+    public static int[] Match(IReadOnlyList<ExpectedShell> exp, IReadOnlyList<ShellMeasure> got, CheckTolerances tol,
+        IReadOnlyList<Shell> shells)
     {
         var cost = new double[exp.Count, got.Count];
+        var allowed = new bool[exp.Count, got.Count];
         for (var e = 0; e < exp.Count; e++)
             for (var j = 0; j < got.Count; j++)
             {
                 var x = exp[e];
                 var g = got[j];
-                cost[e, j] =
-                    Units(g.Volume - x.Volume_m3, tol.VolumeRel * x.Volume_m3) +
-                    Units(g.Footprint - x.FootprintArea_m2, tol.AreaRel * x.FootprintArea_m2) +
-                    Units(g.MaxZ - x.MaxHeight_m, tol.Height_m) +
-                    (g.Genus == x.Genus ? 0 : 1);
+                allowed[e, j] = x.Anchor_m is not { Count: 2 } a || shells[j].ContainsInPlan(a[0], a[1]);
+                cost[e, j] = !allowed[e, j]
+                    ? Forbidden
+                    : Units(g.Volume - x.Volume_m3, tol.VolumeRel * x.Volume_m3) +
+                      Units(g.Footprint - x.FootprintArea_m2, tol.AreaRel * x.FootprintArea_m2) +
+                      Units(g.MaxZ - x.MaxHeight_m, tol.Height_m) +
+                      (g.Genus == x.Genus ? 0 : 1);
             }
-        return Assignment.Solve(cost);
+        var match = Assignment.Solve(cost);
+        for (var e = 0; e < match.Length; e++)
+            if (match[e] >= 0 && !allowed[e, match[e]]) match[e] = -1;
+        return match;
     }
+
+    /// <summary>Cost of a pair the anchor rules out: above any sum of allowed costs (each term is capped at 1e6).</summary>
+    private const double Forbidden = 1e12;
 
     private static double Units(double error, double tolerance)
     {
@@ -335,7 +347,9 @@ public static class Grader
                 value = 0;
                 ok = false;
                 ratio = double.PositiveInfinity;
-                items.Add($"expected shell {e} ({F(w)}): no repaired shell to compare");
+                items.Add(exp[e].Anchor_m is { Count: 2 } a
+                    ? $"expected shell {e} ({F(w)}): no repaired shell left that contains its anchor ({F(a[0])}, {F(a[1])})"
+                    : $"expected shell {e} ({F(w)}): no repaired shell to compare");
             }
             else
             {

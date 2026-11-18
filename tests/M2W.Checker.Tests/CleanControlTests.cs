@@ -92,36 +92,50 @@ public class CleanControlTests
     }
 
     /// <summary>
-    /// Every generated clean control in <c>cases/</c> (empty <c>faultsInjected</c>), graded through the real
-    /// <see cref="CaseChecker"/> from files. No clean cases yet (before the generator's M2 cases land) is not a failure.
+    /// Every case in <c>cases/</c>, given zero repair and graded through the real <see cref="CaseChecker"/> from
+    /// files. Clean controls (empty <c>faultsInjected</c>) must pass. Faulted cases may pass or fail and must
+    /// grade without error. How many pass untouched is logged per fault: a fault that passes untouched is one
+    /// the checks cannot see.
     /// </summary>
     [Fact]
-    public void Generated_clean_controls_pass_with_zero_repair()
+    public void Generated_cases_grade_and_clean_controls_pass_with_zero_repair()
     {
         var checker = new CaseChecker();
-        var tmp = Directory.CreateTempSubdirectory("m2w-check-clean-");
-        var n = 0;
+        var tmp = Directory.CreateTempSubdirectory("m2w-check-cases-");
+        var clean = 0;
         var failures = new List<string>();
+        var byFault = new SortedDictionary<string, (int Total, int PassedUntouched)>(StringComparer.Ordinal);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             foreach (var dir in CaseDiscovery.FindCaseDirs(CasesDir))
             {
                 var expected = ExpectedSpec.Load(Path.Combine(dir, CaseFiles.Expected));
-                if (expected.FaultsInjected.Count > 0) continue;
                 var spec = CaseSpec.Load(Path.Combine(dir, CaseFiles.Case));
                 var input = ObjReader.ReadFile(Path.Combine(dir, spec.Files.Input));
                 var repairedPath = Path.Combine(tmp.FullName, spec.CaseId + ".obj");
                 ObjWriter.WriteFile(ZeroRepair(input, spec.Origin), repairedPath);
                 var r = checker.Check(new CheckRequest { CaseDir = dir, Case = spec, Expected = expected, RepairedObjPath = repairedPath });
-                n++;
-                if (!r.Pass) failures.Add($"{spec.CaseId}: {r.Failed()}");
+                Assert.Empty(r.Validate());
+                Assert.Equal(CheckNames.All, r.Checks.Select(c => c.Name));
+                if (expected.FaultsInjected.Count == 0)
+                {
+                    clean++;
+                    if (!r.Pass) failures.Add($"{spec.CaseId}: {r.Failed()}");
+                }
+                foreach (var f in expected.FaultsInjected)
+                {
+                    byFault.TryGetValue(f, out var t);
+                    byFault[f] = (t.Total + 1, t.PassedUntouched + (r.Pass ? 1 : 0));
+                }
             }
         }
         finally
         {
             tmp.Delete(true);
         }
-        _log.WriteLine($"clean controls in cases/: {n}, failing: {failures.Count}");
+        _log.WriteLine($"clean controls: {clean}, failing: {failures.Count}; graded in {watch.Elapsed.TotalSeconds:0.0} s");
+        foreach (var (f, t) in byFault) _log.WriteLine($"  {f}: {t.PassedUntouched}/{t.Total} pass with zero repair");
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 }

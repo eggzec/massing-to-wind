@@ -43,8 +43,9 @@ Template:
   the closed bottom face; height = highest Z (ground is Z = 0). Measured at the shell's own base so a floating
   shell fails `groundContact` only, not also footprint.
 - Alternatives: area of the shell's projection onto the ground (differs only for overhangs/cantilevers).
-- Why: matches "every shell has a closed bottom face at Z = 0" and the case_0007 example (303 m²).
-- Revisit if: the generator computes plan projection for blocks with overhangs (owner question in PROGRESS.md).
+- Why: matches "every shell has a closed bottom face at Z = 0" and the case_0007 example (303 m²). The generator
+  uses the same definition (its D-015), and its massings never overhang, so the two readings agree on every case.
+- Revisit if: a future generator version adds overhangs or cantilevers.
 
 ## D-021 · 2026-11-18 · checker (M2) · Locating input blocks in repaired shells (mustMerge / mustStaySeparate)
 - Context: groups name input blocks (`B01`), but output objects are `shell_NNN`; the solver's naming says nothing.
@@ -54,30 +55,39 @@ Template:
   does not vote. Most votes wins; ties go to the lowest shell index; no votes = "not found" = group violated.
   `input.obj` is read only when there are groups.
 - Alternatives: trust object order or the solver's report (not allowed); block centroid only (fails for L/U
-  shapes and moved blocks).
+  shapes and moved blocks); the new `expected.shells[].blocks` (D-017) says which blocks belong together but not
+  where they ended up in the repair, so it cannot replace this.
 - Why: purely positional, so it cannot be gamed by naming, and it survives the legitimate moves a repair makes
   (ground snap, gap closing, short-edge collapse).
 - Revisit if: a fault moves a block further than that distance.
 
-## D-020 · 2026-11-18 · checker (M2) · Matching expected shells to repaired shells (pending owner)
-- Context: the brief says "match shells by position", but `expected.json` shells carry no position.
-- Choice: minimum-cost assignment (Hungarian method): cost = volume, footprint and height errors in tolerance
-  units plus 1 per genus mismatch. Unmatched expected shells fail the measure checks; extra repaired shells fail
-  `shellCount`. `euler` compares each matched shell with its expected genus.
-- Alternatives: file order (meaningless); add a position or block list to each expected shell (JSON field change:
-  escalated, see PROGRESS.md).
-- Why: works with the locked schema; a wrong repair cannot pass by being matched to a "better" shell because every
-  expected shell must be within tolerance of a distinct repaired shell.
-- Revisit if: the owner approves a `blocks` field per expected shell; then match by block location (D-021).
+## D-020 · 2026-11-18 · checker (M2) · Matching expected shells to repaired shells: by anchor, best fit as fallback
+- Context: the brief says "match shells by position". The owner approved `anchor_m` and `blocks` per expected
+  shell (generator D-017) in answer to the checker's Q1.
+- Choice: one-to-one minimum-cost assignment (Hungarian method). An expected shell with `anchor_m` may only pair
+  with a repaired shell that contains the anchor in plan (some triangle's ground projection covers it); if no
+  free one does, it stays unmatched and fails volume, footprint and height. Among allowed pairs the cost is the
+  volume, footprint and height errors in tolerance units plus 1 per genus mismatch (this decides, for example,
+  between stacked floors left as separate shells that all cover the anchor). Expected shells without an anchor
+  (case_0007, hidden cases written before D-017) use best fit over all shells. `euler` compares each matched shell
+  with its expected genus. `blocks` is not used for matching (D-021).
+- Alternatives: best fit only (a repair that swaps two blocks' sizes could pass; a test shows this); file order.
+- Why: matching that no fault can move, and no stricter than the agreement for files without anchors.
+- Revisit if: a shell can be hollow in plan at its anchor (not possible with v0.1 massings, per D-017).
 
 ## D-019 · 2026-11-18 · checker (M2) · Self-intersection scope and adjacency
 - Context: "no two non-adjacent triangles intersect" leaves out folds between triangles that do share vertices.
 - Choice: per shell (contact between shells is `minGap_m`). Broad phase: sweep and prune on X over triangle boxes.
-  Narrow phase by shared vertex indices: 0 → any contact (exact segment/triangle tests); 1 → the opposite edges,
-  or the edges leaving the shared vertex (minus 0.1 mm next to it), touch the other triangle; 2 → coplanar fold
-  onto the same side of the shared edge; 3 → duplicate face.
+  Narrow phase by shared vertex indices: 0 → any contact (exact segment/triangle tests, 1e-8 m); 1 → the opposite
+  edges touch the other triangle, or an edge leaving the shared vertex lies in the other triangle's plane and
+  points into (or along a side of) its corner there, judged by angle (1e-10); 2 → coplanar fold onto the same
+  side of the shared edge, or a zero-area face lying on it; 3 → duplicate face. So a zero-area sliver counts as a
+  self-intersection; a thin but non-degenerate one does not (owner Q3).
 - Alternatives: skip all adjacent pairs (misses folds); uniform 3D grid (large roof triangles span many cells).
-- Why: correctness first; 21,600 triangles grade in about 3 s.
+  The first version tested shared-vertex edges by distance after cutting 0.1 mm off them. On rotated plots with
+  mm-rounded coordinates (case_0195) that flagged valid, nearly flat fans 3e-8 rad apart, which made the check
+  stricter than the agreement. It was replaced by the angular test, and a regression test covers it.
+- Why: correctness first; 21,600 triangles grade in about 3 s; all 290 generated cases in about 17 s.
 - Revisit if: hidden cases are much larger (then switch to a BVH).
 
 ## D-018 · 2026-11-18 · checker (M2) · Topology by vertex index; checker does not weld
