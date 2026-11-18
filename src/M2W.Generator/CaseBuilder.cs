@@ -333,7 +333,7 @@ public static class CaseBuilder
             });
         }
 
-        var expectedSpec = ExpectedFrom(caseId, seed, recipe, tol, hf, shells, expected);
+        var expectedSpec = ExpectedFrom(caseId, seed, recipe, tol, hf, shells, expected, site);
         var caseSpec = new CaseSpec
         {
             SchemaVersion = SchemaVersions.Current,
@@ -545,7 +545,7 @@ public static class CaseBuilder
         return null;
     }
 
-    private static ExpectedSpec ExpectedFrom(string caseId, long seed, Recipe recipe, Tolerances tol, HeightField hf, List<ShellStats> shells, List<Block> blocks)
+    private static ExpectedSpec ExpectedFrom(string caseId, long seed, Recipe recipe, Tolerances tol, HeightField hf, List<ShellStats> shells, List<Block> blocks, Site site)
     {
         var sorted = shells
             .OrderByDescending(s => Math.Round(s.Volume, 6))
@@ -575,12 +575,20 @@ public static class CaseBuilder
             Expected = new ExpectedGeometry
             {
                 ShellCount = sorted.Count,
-                Shells = sorted.Select(s => new ExpectedShell
+                Shells = sorted.Select(s =>
                 {
-                    Volume_m3 = Math.Round(s.Volume, 6),
-                    FootprintArea_m2 = Math.Round(s.FootprintArea, 6),
-                    MaxHeight_m = Math.Round(s.MaxHeight, 6),
-                    Genus = s.Genus,
+                    // Anchor (D-017): local plan coordinates, i.e. input minus origin, like repaired.obj.
+                    var (u, v, _) = hf.InteriorPoint(s.Component);
+                    var p = site.ToPlan(u, v);
+                    return new ExpectedShell
+                    {
+                        Volume_m3 = Math.Round(s.Volume, 6),
+                        FootprintArea_m2 = Math.Round(s.FootprintArea, 6),
+                        MaxHeight_m = Math.Round(s.MaxHeight, 6),
+                        Genus = s.Genus,
+                        Blocks = s.Blocks.ToList(),
+                        Anchor_m = new[] { Math.Round(p.X, 3) + 0.0, Math.Round(p.Y, 3) + 0.0 },
+                    };
                 }).ToList(),
                 MustMerge = mustMerge,
                 MustStaySeparate = separate,

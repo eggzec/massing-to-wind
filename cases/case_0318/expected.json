@@ -12,7 +12,14 @@
         "volume_m3": 13777,
         "footprintArea_m2": 688.85,
         "maxHeight_m": 20,
-        "genus": 0
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          5.797,
+          -0.37
+        ]
       }
     ],
     "mustMerge": [],

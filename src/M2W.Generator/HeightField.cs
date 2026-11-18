@@ -255,6 +255,39 @@ public sealed class HeightField
         return rects;
     }
 
+    /// <summary>
+    /// A point strictly inside component <paramref name="c"/>'s footprint, as far from its outline as the grid allows:
+    /// the cell centre with the largest clearance to every cell outside the component (and to the grid's edge).
+    /// Ties go to the first cell in (i, j) order, so the result is deterministic.
+    /// </summary>
+    public (double U, double V, double Clearance) InteriorPoint(int c)
+    {
+        var outside = new List<Rect>();
+        for (var j = 0; j < Ny; j++)
+        {
+            var i = 0;
+            while (i < Nx)
+            {
+                if (Comp[i, j] == c) { i++; continue; }
+                var i0 = i;
+                while (i < Nx && Comp[i, j] != c) i++;
+                outside.Add(new Rect(Xs[i0], Ys[j], Xs[i], Ys[j + 1]));
+            }
+        }
+        (double U, double V, double Clearance) best = (double.NaN, double.NaN, -1);
+        for (var i = 0; i < Nx; i++)
+            for (var j = 0; j < Ny; j++)
+            {
+                if (Comp[i, j] != c) continue;
+                double u = (Xs[i] + Xs[i + 1]) / 2, v = (Ys[j] + Ys[j + 1]) / 2;
+                var d = Math.Min(Math.Min(u - Xs[0], Xs[^1] - u), Math.Min(v - Ys[0], Ys[^1] - v));
+                var p = new Rect(u, v, u, v);
+                foreach (var o in outside) d = Math.Min(d, p.DistanceTo(o));
+                if (d > best.Clearance) best = (u, v, d);
+            }
+        return best;
+    }
+
     /// <summary>Plan distance between two components. Every shell stands on the ground, so it is also the 3D distance.</summary>
     public double Distance(int a, int b)
     {

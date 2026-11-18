@@ -90,6 +90,10 @@ public sealed class ExpectedGeometry
                 Rules.Positive(e, $"expected.shells[{i}].footprintArea_m2", s.FootprintArea_m2);
                 Rules.Positive(e, $"expected.shells[{i}].maxHeight_m", s.MaxHeight_m);
                 if (s.Genus < 0) e.Add($"expected.shells[{i}].genus must be >= 0, got {s.Genus}");
+                if (s.Blocks is not null && (s.Blocks.Count == 0 || s.Blocks.Any(string.IsNullOrWhiteSpace)))
+                    e.Add($"expected.shells[{i}].blocks must list at least one block name");
+                if (s.Anchor_m is not null && (s.Anchor_m.Count != 2 || s.Anchor_m.Any(x => !double.IsFinite(x))))
+                    e.Add($"expected.shells[{i}].anchor_m must be [x, y] with two finite numbers");
             }
         }
         ValidateGroups(e, "expected.mustMerge", MustMerge);
@@ -116,6 +120,15 @@ public sealed class ExpectedShell
 
     /// <summary>Number of through-holes (courtyards). V − E + F = 2 − 2 × genus.</summary>
     [JsonPropertyName("genus")] public required int Genus { get; init; }
+
+    /// <summary>Optional (owner-approved 2026-11-18, D-017): the input blocks that end up in this shell,
+    /// e.g. <c>["B03","B04"]</c>. Block names are the prefix of the input object names.</summary>
+    [JsonPropertyName("blocks")] public IReadOnlyList<string>? Blocks { get; init; }
+
+    /// <summary>Optional (owner-approved 2026-11-18, D-017): a plan point [x, y] in local coordinates (input minus
+    /// origin) strictly inside this shell's footprint, well away from its walls. Used to match repaired shells to
+    /// expected ones by position.</summary>
+    [JsonPropertyName("anchor_m")] public IReadOnlyList<double>? Anchor_m { get; init; }
 }
 
 public sealed class ExpectedChecks

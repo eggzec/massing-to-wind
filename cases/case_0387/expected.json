@@ -12,19 +12,40 @@
         "volume_m3": 14285.544,
         "footprintArea_m2": 1536.08,
         "maxHeight_m": 9.3,
-        "genus": 1
+        "genus": 1,
+        "blocks": [
+          "B03"
+        ],
+        "anchor_m": [
+          114.254,
+          -44.446
+        ]
       },
       {
         "volume_m3": 11964.82,
         "footprintArea_m2": 488.36,
         "maxHeight_m": 24.5,
-        "genus": 0
+        "genus": 0,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          52.531,
+          50.192
+        ]
       },
       {
         "volume_m3": 9952.8,
         "footprintArea_m2": 904.8,
         "maxHeight_m": 11,
-        "genus": 0
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          74.967,
+          11.424
+        ]
       }
     ],
     "mustMerge": [],

@@ -13,6 +13,22 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-017 · 2026-11-18 · generator (M2) · expected.shells[] gains `blocks` and `anchor_m` (owner-approved)
+- Context: the checker matches expected to repaired shells "by position", but expected.json had no positions;
+  best fit on volume/footprint/height/genus is ambiguous when shells are alike (0 cases at seed 1, 1 at seed 90001)
+  and can pair a wrong repair with the wrong answer.
+- Choice (owner approved 2026-11-18): two optional fields per expected shell. `blocks`: the block names in the shell
+  (same names as mustMerge; `B01_F03` belongs to `B01`). `anchor_m`: [x, y] in local coordinates (input minus
+  origin, the frame of repaired.obj), strictly inside the shell's footprint: the grid-cell centre with the largest
+  clearance from everything outside the shell, rounded to 1 mm. The checker matches a repaired shell by "contains
+  the anchor in plan". Tested: each anchor ±0.5 m in x and y lies inside its own blocks and outside all others.
+  `ExpectedShell` in M2W.Geometry got two optional properties (additive; old files such as case_0007 still read).
+  `schemaVersion` stays 0.1 (not a breaking change). AGREEMENT.md text is with the owner (PROGRESS, Waiting for owner).
+- Alternatives: `blocks` only (checker would derive positions from the faulted input.obj: lifted, offset, and the
+  centroid of an L/U/courtyard can be outside the building); keep best fit.
+- Why: matching independent of every fault, with no new solver-visible information.
+- Revisit if: shells could ever be hollow in plan at the anchor (not possible with v0.1 massings).
+
 ## D-016 · 2026-11-18 · generator (M2) · Case IDs, order, seeds and regeneration
 - Context: `run-all` rejects duplicate caseIds, and `cases/_example/case_0007` already exists. Hidden sets use other seeds.
 - Choice: generated IDs run from `case_0101` (`case_0001`–`0100` kept for hand-made cases). The 290 recipes are
@@ -33,6 +49,9 @@ Template:
   contact (non-manifold), outline steps closer than `max(2 m, 2.5 × minGap, 4 × minEdge)`, separate shells closer
   than `max(4 m, 3 × minGap)` (except deliberate smallGap-above pairs). A test casts vertical rays through every
   emitted mesh and checks it against the height field, cell by cell, for all 290 cases.
+  **Footprint** (`footprintArea_m2`) = area of the shell's bottom face at z = 0 (agreed with the checker,
+  2026-11-18). Upper tiers always sit inside lower ones and everything stands on the ground, so it always equals the
+  full plan outline (courtyards excluded either way); the two would differ only with overhangs, which v0.1 never makes.
 - Alternatives: arbitrary-angle footprints with a polygon clipping library; voxel estimates (not exact).
 - Why: exact, fast, independent of the solver's methods; the plot and the grid can still be at any angle.
 - Revisit if: v0.2 needs curved or non-orthogonal footprints, bridges or overhangs.

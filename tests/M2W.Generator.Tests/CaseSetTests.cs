@@ -121,6 +121,35 @@ public class GroundTruthTests
         if (!c.Recipe.Has("shortEdge")) Assert.Equal(clean, input, 9);
     }
 
+    /// <summary>blocks and anchor_m (D-017): every block is in exactly one shell, and each anchor (with 0.5 m to spare
+    /// in every direction) lies inside that shell's blocks and outside every other block.</summary>
+    [Theory]
+    [MemberData(nameof(CaseIndexes))]
+    public void Shell_blocks_and_anchors_identify_each_shell(int index)
+    {
+        var c = Cases.Seed1[index];
+        var shells = c.Expected.Expected.Shells;
+        var all = shells.SelectMany(s => s.Blocks!).ToList();
+        Assert.Equal(c.ExpectedBlocks.Select(b => b.Name).OrderBy(n => n, StringComparer.Ordinal), all.OrderBy(n => n, StringComparer.Ordinal));
+        Assert.Equal(c.Expected.Expected.MustMerge.Select(m => string.Join(",", m)).OrderBy(x => x, StringComparer.Ordinal),
+            shells.Where(s => s.Blocks!.Count > 1).Select(s => string.Join(",", s.Blocks!)).OrderBy(x => x, StringComparer.Ordinal));
+        foreach (var s in shells)
+        {
+            Assert.Equal(2, s.Anchor_m!.Count);
+            foreach (var (dx, dy) in new[] { (0.0, 0.0), (0.5, 0.0), (-0.5, 0.0), (0.0, 0.5), (0.0, -0.5) })
+            {
+                var g = c.Site.ToGrid(new P2(s.Anchor_m[0] + dx, s.Anchor_m[1] + dy));
+                foreach (var b in c.ExpectedBlocks)
+                {
+                    var inside = b.TopAt(g.X, g.Y) > 0;
+                    if (!s.Blocks!.Contains(b.Name)) Assert.False(inside, $"{c.CaseId}: anchor of {string.Join("+", s.Blocks!)} is in {b.Name}");
+                }
+                Assert.True(s.Blocks!.Any(n => c.ExpectedBlocks.Single(b => b.Name == n).TopAt(g.X, g.Y) > 0),
+                    $"{c.CaseId}: anchor {s.Anchor_m[0]}, {s.Anchor_m[1]} (+{dx}, {dy}) is not inside {string.Join("+", s.Blocks!)}");
+            }
+        }
+    }
+
     private static string Describe(Block b) =>
         $"{b.Name}|{string.Join(";", b.Rects)}|{string.Join(";", b.Tiers)}|{string.Join(";", b.FloorHeights)}";
 

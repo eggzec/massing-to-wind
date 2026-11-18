@@ -33,8 +33,10 @@ The order is shuffled with the seed, so a case ID says nothing about its faults.
    longest site edge. Groups of blocks are placed inside the setback, at least `max(4 m, 3 × minGap)` apart.
 3. **Ground truth.** The corrected model is merged as an exact 2.5D height field. That gives shell count, volume,
    footprint area, height, genus (courtyard holes), mustMerge and mustStaySeparate (blocks in different shells
-   within 10 m of each other). Shells are listed largest volume first. Nothing is typed by hand.
-4. **Faults.** These are applied to the emitted geometry. See the table below and `DECISIONS.md` (D-009 to D-016).
+   within 10 m of each other). Shells are listed largest volume first, each with `blocks` (which blocks it contains)
+   and `anchor_m` (a local [x, y] point well inside its footprint, for matching by position; D-017). Footprint is
+   the area of the bottom face at z = 0. Nothing is typed by hand.
+4. **Faults.** These are applied to the emitted geometry. See the table below and `DECISIONS.md` (D-009 to D-017).
 
 | Fault | How it is injected | Expected answer |
 | --- | --- | --- |

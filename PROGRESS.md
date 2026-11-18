@@ -4,6 +4,17 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
+- **2026-11-18 · generator · AGREEMENT.md text for the approved `blocks` / `anchor_m` fields (D-017).** AGREEMENT.md
+  is locked, so I did not edit it. Suggested addition under **`expected.json`**, after the example:
+
+  > Each entry in `expected.shells` may also carry `blocks` (the input block names in that shell, e.g.
+  > `["B01", "B02"]`) and `anchor_m` (`[x, y]` in local coordinates, strictly inside the shell's footprint).
+  > The checker matches a repaired shell to an expected one by which shell contains the anchor in plan.
+  > `footprintArea_m2` is the area of the shell's bottom face at z = 0.
+
+  and in the example shell: `"genus": 0, "blocks": ["B01", "B02"], "anchor_m": [10.0, 5.0]`. Then commit and
+  `git tag -f lock-v0.1`. Additive and optional, so `schemaVersion` stays 0.1.
+
 - **2026-11-18 · generator · lock check can falsely skip (shared `scripts/`, not changed).** On this machine
   `validate.ps1` calls `bash` = WSL bash. Inside a git *worktree* WSL's git cannot follow the `.git` file (it holds a
   Windows path), so `check-locks.sh` sees "not a git repository", reports `locks: no lock-v0.1 tag yet, skipping`
@@ -22,6 +33,19 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-18 · generator · M2 shell matching fields (owner-approved)
+- Changed: `expected.shells[]` now has `blocks` and `anchor_m` (D-017), answering the checker's Q1. Added two optional
+  properties to `ExpectedShell` in shared `M2W.Geometry` (no existing signature changed) plus
+  `tests/M2W.Geometry.Tests/ExpectedShellFieldsTests.cs` (optional, round trip, bad values). Generator fills them;
+  `HeightField.InteriorPoint` picks the anchor. New test: for all 290 cases each anchor ±0.5 m lies inside its own
+  shell's blocks and outside every other block, and `blocks` partitions the case's blocks consistently with mustMerge.
+  Regenerated `cases/`: only the 290 `expected.json` files changed; every `input.obj` and `case.json` is byte-identical.
+  Checker's Q2 (footprint = bottom-face area): same definition as the generator, recorded in D-015; no case differs.
+- validate (`scripts/validate.sh`, Git Bash): build ✅ · tests 2317/2317 (Geometry 88, Cli 31, Generator 2198) · cases passing 0/291 (stub solver, no checker yet; per-fault totals unchanged) · locks OK · **VALIDATE: GREEN**.
+- Next: owner adds the AGREEMENT.md text (Waiting for owner) and re-tags; checker can switch to anchor matching.
+  Note for merging: `check/m2` may also touch `ExpectedSpec.cs`; this change only adds members.
+- Blockers: none.
 
 ### 2026-11-18 · generator · M2 test cases
 - Changed (all in `src/M2W.Generator/`, `tests/M2W.Generator.Tests/`, `cases/`):
