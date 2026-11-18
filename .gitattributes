@@ -1,0 +1,7 @@
+# Keep LF in the working tree for files whose line endings matter, even with core.autocrlf=true on Windows.
+# Shell scripts: bash rejects CR ("set: pipefail\r: invalid option name").
+# OBJ and JSON: AGREEMENT.md requires LF, and generated cases must be byte-identical on every platform.
+* text=auto
+*.sh   text eol=lf
+*.obj  text eol=lf
+*.json text eol=lf
