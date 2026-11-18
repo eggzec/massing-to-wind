@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "0.1",
+  "caseId": "case_0115",
+  "seed": 1770618648,
+  "faultsInjected": [
+    "sliver"
+  ],
+  "expected": {
+    "shellCount": 2,
+    "shells": [
+      {
+        "volume_m3": 21250.988,
+        "footprintArea_m2": 878.14,
+        "maxHeight_m": 24.2,
+        "genus": 0
+      },
+      {
+        "volume_m3": 12774.6,
+        "footprintArea_m2": 758.84,
+        "maxHeight_m": 18,
+        "genus": 0
+      }
+    ],
+    "mustMerge": [],
+    "mustStaySeparate": [
+      [
+        "B01",
+        "B02"
+      ]
+    ]
+  },
+  "checks": {
+    "watertight": true,
+    "outwardNormals": true,
+    "noSelfIntersections": true,
+    "minGap_m": 1,
+    "minEdge_m": 0.25
+  },
+  "tolerances": {
+    "volumeRel": 0.01,
+    "areaRel": 0.01,
+    "height_m": 0.01
+  }
+}

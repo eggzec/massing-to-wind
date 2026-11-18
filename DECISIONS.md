@@ -13,6 +13,96 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-016 · 2026-11-18 · generator (M2) · Case IDs, order, seeds and regeneration
+- Context: `run-all` rejects duplicate caseIds, and `cases/_example/case_0007` already exists. Hidden sets use other seeds.
+- Choice: generated IDs run from `case_0101` (`case_0001`–`0100` kept for hand-made cases). The 290 recipes are
+  shuffled with the master seed before IDs are given, so an ID says nothing about its faults and differs per seed.
+  Each case has its own seed (hash of master seed and recipe position), recorded in `expected.json` and `index.json`.
+  `generate` first deletes only `case_NNNN` folders that contain `case.json`.
+- Alternatives: IDs grouped by fault (easier to browse, but invites ID-based overfitting); skipping only `0007`.
+- Why: IDs stay clear of hand-made cases and carry no information; `index.json` gives the mapping for people.
+- Revisit if: the owner wants stable IDs across seeds.
+
+## D-015 · 2026-11-18 · generator (M2) · Exact ground truth from a 2.5D height field in a grid frame
+- Context: expected.json must be computed from the clean geometry, including unions (overlap, touching, closed gaps)
+  and genus, with no hand-typed numbers and no general 3D boolean library.
+- Choice: every site has one grid frame (direction of its longest edge, a unit vector built with one square root,
+  no trigonometry). Footprints are unions of rectangles in that frame; tiers (setbacks) are nested; everything
+  stands on z = 0. So the union is a height field on a rectilinear grid: volume, footprint, height, shells and genus
+  (footprint holes) are exact sums. Configurations that would be ambiguous are rejected and redrawn: diagonal-only
+  contact (non-manifold), outline steps closer than `max(2 m, 2.5 × minGap, 4 × minEdge)`, separate shells closer
+  than `max(4 m, 3 × minGap)` (except deliberate smallGap-above pairs). A test casts vertical rays through every
+  emitted mesh and checks it against the height field, cell by cell, for all 290 cases.
+- Alternatives: arbitrary-angle footprints with a polygon clipping library; voxel estimates (not exact).
+- Why: exact, fast, independent of the solver's methods; the plot and the grid can still be at any angle.
+- Revisit if: v0.2 needs curved or non-orthogonal footprints, bridges or overhangs.
+
+## D-014 · 2026-11-18 · generator (M2) · smallGap answer: the gap is filled up to the lower block
+- Context: AGREEMENT.md says gaps narrower than `minGap` are closed and the blocks merged, but not how high the
+  fill goes when the blocks differ.
+- Choice: below-threshold pairs are built so the answer is unambiguous. The smaller block B faces the larger block A
+  across the gap, B's facing wall lies within A's, and B is no taller than A along it. The expected model extends B
+  across the gap (including tiers that are flush with that wall), which is what morphological closing gives. Half the
+  smallGap cases are above the threshold (1.1–2.0 × minGap) and must stay separate (`mustStaySeparate`); they are
+  labelled `smallGap` too, because they test the same rule from the other side. Exactly 0.9 × and 1.1 × appear in
+  4 single-fault cases each. 30 % of smallGap cases use `minGap` 0.5, 0.75 or 1.5 instead of 1.0.
+- Alternatives: fill to the taller block (not what closing does); allow partial facing overlaps (fillets at the
+  ends make the answer depend on the structuring element).
+- Why: fair to any reasonable closing implementation; the threshold is tested from both sides.
+- Revisit if: the owner wants gaps between walls of different extents.
+
+## D-013 · 2026-11-18 · generator (M2) · floatingBlock / sunkBlock: rigid move within groundSnap, answer moves it back
+- Context: "blocks within groundSnap of z = 0 are snapped to the ground". A lifted block could be moved down
+  (height unchanged) or stretched down (height + lift). The two differ by more than the 1 % volume tolerance.
+- Choice: the fault is a rigid vertical move of a whole block (all its floors) by 0.1–0.9 × `groundSnap`
+  (0.9 × in a quarter of the single-fault cases). The expected answer is the clean model: moved back, height
+  unchanged. Never beyond `groundSnap`, where the agreement gives no answer.
+- Alternatives: stretch to the ground; also generate lifts above `groundSnap` (undefined by the agreement).
+- Why: "snap" reads as "move"; the clean model is the design intent.
+- Revisit if: the owner reads "snap" as "extend".
+
+## D-012 · 2026-11-18 · generator (M2) · Sliver and shortEdge: what is injected and what is expected
+- Context: both faults are "remove what is too small", so the repaired geometry should not depend on how it is removed.
+- Choice: `sliver` adds thin triangles (smallest angle < 0.3 × `minAngleDeg`) or zero-area triangles along shared
+  edges, re-routing the face through the new vertex; the surface stays closed and the solid is unchanged.
+  `shortEdge` (one third each) adds a split vertex `0.1–0.8 × minEdge` from an edge end (geometry unchanged), or a
+  ledge (upper floors set back by ε on one side), or a jog (a footprint rectangle moved ε off its neighbour's line),
+  with ε = 0.1–0.8 × `minEdge`. Expected: the flush design. A ledge or jog may change a shell's volume by at most
+  0.3 %, so filling it or cutting it both pass. Blocks of a closing gap pair are never given a ledge (it could push
+  the gap over `minGap`).
+- Alternatives: slivers that change geometry (slanted thin faces); bigger misalignments.
+- Why: realistic exporter and modelling defects with one clear answer.
+- Revisit if: the checker adds a minimum-angle check (the expected answer already has none below `minAngleDeg`).
+
+## D-011 · 2026-11-18 · generator (M2) · Clean controls are already valid output
+- Context: M2 requires clean controls that pass the checker "with zero repair".
+- Choice: clean controls have origin [0, 0, 0], triangles only, one closed outward shell per block, every block on
+  z = 0, no triangle angle below `minAngleDeg`, no edge below `minEdge`, blocks ≥ 4 m apart. Object names are
+  `B01`, `B02` … (the input naming in AGREEMENT.md), not `shell_NNN`. Triangle meshes split walls at every floor and
+  keep grid cells at an aspect ratio of 4 or less (all angles ≥ 14°). Other cases use polygons (55 %) or triangles.
+- Alternatives: name objects `shell_NNN` (breaks the input naming rule); polygons (not valid output).
+- Why: the only "repair" a clean control needs is a rename, which lets the checker prove it is not too strict.
+- Revisit if: the checker wants clean inputs that are byte-for-byte valid `repaired.obj` files.
+
+## D-010 · 2026-11-18 · generator (M2) · Tolerances vary in some cases
+- Context: a solver that hard-codes the AGREEMENT.md defaults would pass every case if the defaults never changed.
+- Choice: in about 30 % of the cases with the relevant fault, case.json moves one threshold: `minGap` 0.5/0.75/1.5
+  (smallGap), `minEdge` 0.15/0.4 (shortEdge), `groundSnap` 0.25/1.0 (floating/sunk), `weld` 0.0005/0.005
+  (duplicates), `minAngleDeg` 3/10 (sliver). `expected.json` `checks.minGap_m`/`minEdge_m` copy the case values.
+  Clean controls use the defaults. The defaults themselves are unchanged.
+- Alternatives: defaults everywhere.
+- Why: a harder, fairer exam; it is what case.json tolerances are for.
+- Revisit if: the owner wants v0.1 cases on defaults only.
+
+## D-009 · 2026-11-18 · generator (M2) · Determinism: own PRNG, no trigonometry, a committed-cases test
+- Context: same seed must give byte-identical files, ideally on every OS and .NET patch version.
+- Choice: xoshiro256** seeded by SplitMix64, streams forked by tag (FNV-1a) so one extra draw does not shift other
+  cases; directions from integer vectors and `Math.Sqrt` (IEEE exact) instead of `Math.Sin/Cos`; coordinates rounded
+  to 6 decimals. `Committed_cases_match_the_generator` regenerates seed 1 and compares every byte with `cases/`.
+- Alternatives: `System.Random` (algorithm may change), `Math.Sin/Cos` (results may differ by platform in the last bit).
+- Why: hidden cases on the owner's machine and CI on Linux must match.
+- Revisit if: the committed-cases test ever fails on CI.
+
 ## D-008 · 2026-11-18 · shared (M1) · `.gitattributes` forces LF for `*.sh`, `*.obj`, `*.json`
 - Context: with `core.autocrlf=true` and no `.gitattributes`, Windows checkouts got CRLF; `check-locks.sh` then
   failed in bash (`set: pipefail\r: invalid option name`) and the example OBJ was CRLF despite AGREEMENT.md saying LF.

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "0.1",
+  "caseId": "case_0267",
+  "units": "m",
+  "origin": [
+    621724.04,
+    5716378.245,
+    81.87
+  ],
+  "tolerances": {
+    "cellSize": 1,
+    "minGap": 1,
+    "minEdge": 0.25,
+    "weld": 0.001,
+    "minAngleDeg": 5,
+    "groundSnap": 0.5
+  },
+  "files": {
+    "input": "input.obj"
+  }
+}
