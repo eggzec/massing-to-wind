@@ -20,6 +20,11 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
   (or test containment against the bottom face as a polygon, not triangle by triangle).
 - **Solver meanwhile:** I am *not* choosing triangulations to dodge anchor positions; that would be tuning output to
   the grader. Failures caused by this are listed as such in each PROGRESS entry.
+- **Owner answer (2026-11-21): approved.** Confirmed in review: `Shell.ContainsInPlan`
+  (`src/M2W.Checker/Shell.cs:82`) already counts edges as inside (`u >= 0 && v >= 0 && w >= 0`), but for an anchor
+  exactly on a diagonal, rounding makes one weight about −1e-17 in both triangles. Fix: accept weights `>= -1e-9`.
+  Checker agent implements it (see the 2026-11-21 owner entry in the log). Delete this item once the fix is merged and
+  re-locked.
 
 
 ## Current status
@@ -29,10 +34,103 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
-| M4 Hard faults | ✅ Criteria met, ready for the feature-freeze gate | 291/291 (unseen seeds 870/870) | 2026-11-21 |
+| M4 Hard faults | ✅ Criteria met; feature-freeze gate held for owner decisions R1 and Q-S1 (approved, being implemented) | 291/291 (unseen seeds 870/870; hidden 290/290) | 2026-11-21 |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-21 · owner · Private benchmark run on geometry not made by the generator; 3 problems for M5
+- The owner keeps a private benchmark set outside the repo: published wind-engineering benchmark buildings and a
+  real urban district model. Like the hidden set, agents get totals only: no names, sources, geometry or margins.
+  - Run on `solve/m4` @ `e04558b`.
+  - Benchmarks with exact answers: **7/7 pass**, zero error. No repair operation runs besides welding: clean
+    geometry comes back unchanged.
+  - Real district (about 500 parts, 8.4k triangles, given as one object and as one object per part): all output
+    shells are valid by an independent check and the output is deterministic. Status is `partial`: raised slabs
+    (canopies) are filled down to the ground, as documented. The changes are explained by the gap closing and
+    short-edge rules.
+- **Problems for the solver to fix in M5** (behaviour is correct; none of these is a wrong answer):
+  1. **Runtime does not scale.**
+     - The real district takes about 50 s per run (35–60 s seen), against a mean of 7 ms per generated case. A
+       city area of thousands of buildings would take many minutes.
+     - Profile it and find the term that grows faster than linear (likely pairwise work over all components,
+       plan faces or rebuild rounds).
+     - Target: under 5 s for about 500 buildings.
+     - Add a timing test with a large synthetic site (e.g. 500 random blocks) so this cannot regress unnoticed.
+  2. **Warnings do not say where.**
+     - With a single input object, the warning reads "block `<name>` has no support below part of it (it floats
+       beyond groundSnap); filled down to the ground" and gives no location. A user with a city model in one
+       object cannot find the canopy.
+     - Each warning about a region (support fill, holes left open, shell rebuild fallback) should carry its plan
+       position, e.g. the bounding box `[xmin, ymin, xmax, ymax]` in local coordinates, and its area or count.
+     - Fields may be added to `report.json` (readers ignore unknown fields), but keep the existing ones as they
+       are.
+  3. **Report detail depends on how the input is split into objects.**
+     - With one input object, all gap closing is reported as a single `closeGap` entry with `width_m: 0` and no
+       `unionBlocks` entry.
+     - With one object per part, parts that merely touch are logged as `closeGap` with `width_m: 0` (244 entries)
+       besides `unionBlocks`.
+     - Wanted: `closeGap` only for real gaps (width > 0), with the actual width and the plan position; touching or
+       overlapping parts reported as unions; and the same count of operations whatever the object split.
+     - No `AGREEMENT.md` change is needed: op names and `count` stay; only what is logged under them changes.
+- These come after the R1 / Q-S1 actions above and do not block the M4 gate. Record each fix as a D-entry and list
+  any remaining limit in `KNOWN_LIMITATIONS.md`.
+- validate (`scripts/validate.ps1`, after this entry; docs only): build ✅ · tests 2465/2465 (Geometry 88, Cli 31,
+  Generator 2198, Checker 86, Repair 62) · cases 291/291 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
+
+### 2026-11-21 · owner · M4 independent review; decisions R1 (roof steps below `minEdge`) and Q-S1 approved
+- **Review** (independent reviewer working for the owner; no repo code changed):
+  - Hidden set (`run-all ../hidden --out ../hidden-out`): **290/290**, all `repaired`, every fault type 100 %. The
+    291st entry in `../hidden` is `index.json`, not a case.
+  - Worst share of the tolerance used: footprint 18 %, height 6 %, volume 94 % (`case_0388`), then 55 %
+    (`case_0181`); 95 % of shells use under 0.02 %.
+  - Two hidden runs give byte-identical `repaired.obj` for all 290 cases.
+  - An independent re-check written from AGREEMENT.md alone (not the checker) finds no fault in 693 shells: closed,
+    outward, on Z = 0, no edge below `minEdge`, no shells closer than `minGap`. It caught three planted faults.
+  - The 44 hidden cases with non-default tolerances are handled at those tolerances (`minGap` 0.5 / 0.75 / 1.5,
+    `groundSnap` 0.25 / 1).
+  - Integrity: no case IDs, `expected.json` or checker/generator references in `src/M2W.Repair`; `solve/m4` touches
+    no other role's or locked path; the solver sessions never read `../hidden` or used its seed.
+  - Out-of-distribution inputs (hand-built): a cantilever is filled down to the ground and a sloped roof is passed
+    through. Both are reported `partial` with clear warnings, not hidden.
+- **Decision R1: approved.** Roof steps lower than `minEdge` are flushed to the higher roof, and expected answers
+  include the flush.
+  - Why: `case_0388` (crossing bars at 13.6 and 13.8 m) passes at 94 % of the volume tolerance. Its expected answer
+    keeps a 0.2 m step whose walls are shorter than `minEdge`, so no valid output can match it. A 0.24 m step on the
+    same bars would fail (about 1.13 %). The solver already flushes (D-030, D-036).
+  - The rule is kept, not avoided: design tools do produce near-equal neighbouring heights.
+  - Additive meaning, no file format change: `schemaVersion` stays 0.1.
+- **Decision Q-S1: approved** as answered above: accept barycentric weights `>= -1e-9` in `ContainsInPlan`.
+- **Actions:**
+  1. **Owner:** add to AGREEMENT.md, under the tolerance table, under the owner's own commit: *"Roof regions that
+     touch in plan (share an edge or a corner) and whose heights differ by less than `minEdge` are raised to the
+     highest of them, repeated until no such step remains. Expected answers include this."*
+  2. **Generator** (`gen/…`):
+     - compute expected `volume_m3` / `maxHeight_m` after the flush rule, from the AGREEMENT text, not from solver
+       code;
+     - add a `roofStep` fault: about 30 cases, steps both just below and just above `minEdge`;
+     - regenerate `cases/`, add a D-entry, and validate.
+  3. **Checker** (`check/…`):
+     - Q-S1 fix and a test with an anchor exactly on a triangle diagonal;
+     - check that the existing checks still pass on the regenerated cases; add a D-entry; validate.
+  4. **Solver:** no change expected. After the new cases land, run validate and report the `roofStep` results and
+     margins.
+  5. **Owner:**
+     - merge, then move `lock-v0.1`;
+     - regenerate the hidden set with a seed recorded only outside the repo;
+     - run it and hold the M4 feature-freeze gate.
+- **Reviewer recommendations, not yet decided:**
+  - remove the hidden seed (90001) from `cases/README.md` and `OWNER_GUIDE.md`;
+  - add 5–10 hand-built hidden cases: cantilever, sloped roof, courtyard near `minGap`, large next to tiny, a real
+    design-tool export;
+  - M5 README results table with the worst margin per check;
+  - KNOWN_LIMITATIONS: overhangs filled, sloped roofs `partial`, output slivers, flush volume change, D-034 jogs;
+  - CI determinism check.
+- validate (`scripts/validate.ps1`, after this entry; docs only): build ✅ · tests 2465/2465 (Geometry 88, Cli 31,
+  Generator 2198, Checker 86, Repair 62) · cases 291/291 · locks OK · **VALIDATE: GREEN**.
+- Next: actions 1–5 in order (1 and 2 first; 3 can run in parallel).
+- Blockers: none.
 
 ### 2026-11-21 · solver · M4 step 4: randomised property tests; M4 criteria met
 - New `Step8PropertyTests`: FsCheck properties on random **faulty** sites. 1–4 blocks at random, or placed a random
