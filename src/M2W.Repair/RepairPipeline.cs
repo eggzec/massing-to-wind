@@ -1,6 +1,7 @@
 using M2W.Geometry;
 using M2W.Geometry.Models;
 using M2W.Repair.Model;
+using M2W.Repair.Planar;
 using M2W.Repair.Steps;
 using M2W.Repair.Union;
 
@@ -23,6 +24,18 @@ public static class RepairPipeline
             return new List<OutputShell>();
         }
 
+        // 1b. An object holding several separate closed solids becomes one part per solid (D-039).
+        var parts = new List<Solid>();
+        foreach (var s in solids)
+        {
+            var pieces = PartSplitter.Split(s, tol.Weld);
+            if (pieces.Count > 1)
+                log.Note($"object {s.Name} holds {pieces.Count} separate closed solids; each is a part of its own " +
+                         $"({pieces[0].Name} to {pieces[^1].Name})");
+            parts.AddRange(pieces);
+        }
+        solids = parts;
+
         // 2. Weld, drop degenerate polygons, triangulate, drop duplicate triangles.
         int welded = 0, degenerate = 0, split = 0, failedTri = 0, duplicates = 0;
         foreach (var s in solids)
@@ -43,6 +56,7 @@ public static class RepairPipeline
 
         // 3. Consistent outward orientation, T-junctions on free edges, hole closing.
         int reversed = 0, tSplits = 0, holes = 0, open = 0;
+        var leftOpen = new List<Dictionary<string, object>>();
         foreach (var s in solids)
         {
             var before = new HashSet<Tri>(s.Triangles.Select(t => t.Canonical()));
@@ -52,32 +66,63 @@ public static class RepairPipeline
             if (hr.TJunctionsSplit > 0 || hr.HolesFilled > 0) Orienter.MakeConsistent(s);
             Orienter.MakeOutward(s);
             reversed += s.Triangles.Count(t => !before.Contains(t.Canonical()) && before.Contains(t.Reversed().Canonical()));
-            if (hr.HolesLeftOpen > 0) log.Fail($"object {s.Name}: {hr.HolesLeftOpen} holes could not be closed");
+            if (hr.HolesLeftOpen > 0)
+            {
+                // Where: the free edges that are left (each is on the rim of an open hole).
+                var free = Orienter.EdgeTriangles(s.Triangles).Where(kv => kv.Value.Count == 1).Select(kv => kv.Key).ToList();
+                var box = PlanBox.Of(free.SelectMany(e => new[] { s.Vertices[e.Item1], s.Vertices[e.Item2] }).Select(Plan));
+                log.Fail($"object {s.Name}: {hr.HolesLeftOpen} holes could not be closed ({free.Count} open edges, at {box})");
+                leftOpen.Add(new Dictionary<string, object>
+                {
+                    ["object"] = s.Name, ["count"] = hr.HolesLeftOpen, ["openEdges"] = free.Count, ["bbox_m"] = box.ToArray(),
+                });
+            }
         }
         if (reversed > 0) log.Op("fixOrientation", count: reversed);
         if (tSplits > 0) log.Op("splitTJunctions", count: tSplits);
-        if (holes > 0) log.Op("closeHoles", count: holes);
+        if (holes > 0 || leftOpen.Count > 0)
+            log.Op("closeHoles", count: holes, extra: leftOpen.Count == 0 ? null : new Dictionary<string, object>
+            {
+                ["leftOpen"] = leftOpen.Sum(x => (int)x["count"]), ["leftOpenRegions"] = leftOpen,
+            });
 
         // 4. Ground snap: blocks within groundSnap of Z = 0 are moved onto it.
         foreach (var mv in GroundSnapper.Snap(solids, tol.GroundSnap))
             log.Op("groundSnap", block: mv.Block, extra: new Dictionary<string, object> { ["dz_m"] = Math.Round(mv.Dz, 9) });
-        foreach (var g in solids.GroupBy(s => s.Block))
+        foreach (var g in solids.GroupBy(s => s.Group))
         {
             var minZ = g.SelectMany(s => s.Vertices).Min(v => v.Z);
-            if (minZ < -1e-9) log.Fail($"block {g.Key} reaches {minZ:0.###} m below ground, beyond groundSnap; not moved");
+            if (minZ < -1e-9)
+                log.Fail($"block {g.Key} reaches {minZ:0.###} m below ground, beyond groundSnap; not moved (at " +
+                         $"{PlanBox.Of(g.SelectMany(s => s.Vertices).Select(Plan))})");
         }
 
         // 5. Union as a 2.5D height field: merges stacked floors, overlaps and touching walls; one shell per footprint.
         // 6. Gaps narrower than minGap between separate parts are bridged inside the union (closing per height level).
         var union = new HeightFieldUnion(solids, tol.Weld, tol.MinEdge, tol.MinGap).Run();
         foreach (var p in union.Problems) log.Fail(p);
-        foreach (var g in union.ClosedGaps.GroupBy(g => (g.a, g.b)).OrderBy(g => g.Key.a, StringComparer.Ordinal)
+        // Real gaps (width above the output precision) are closeGap; parts that touch (meet at a point, so the slice
+        // has them apart with no width between) are filled at the contact too, and reported with their union.
+        var gaps = union.ClosedGaps.Where(g => g.width >= GapCloser.Slack).ToList();
+        var touching = union.ClosedGaps.Where(g => g.width < GapCloser.Slack).ToList();
+        foreach (var g in gaps.GroupBy(g => (g.a, g.b)).OrderBy(g => g.Key.a, StringComparer.Ordinal)
                      .ThenBy(g => g.Key.b, StringComparer.Ordinal))
             log.Op("closeGap", pair: new[] { g.Key.a, g.Key.b }, width: Math.Round(g.Min(x => x.width), 6),
                 extra: new Dictionary<string, object>
                 {
                     ["fillHeight_m"] = g.Max(x => x.z), ["minGap_m"] = tol.MinGap,
+                    ["bbox_m"] = g.Aggregate(PlanBox.Empty, (b, x) => b.Union(x.box)).ToArray(),
                 });
+        foreach (var (block, regions) in union.Unsupported)
+            log.Op("fillUnsupported", block: block, count: regions.Count, extra: new Dictionary<string, object>
+            {
+                ["area_m2"] = Math.Round(regions.Sum(r => r.area), 3),
+                ["bbox_m"] = regions.Aggregate(PlanBox.Empty, (b, r) => b.Union(r.box)).ToArray(),
+                ["regions"] = regions.Select(r => new Dictionary<string, object>
+                {
+                    ["bbox_m"] = r.box.ToArray(), ["area_m2"] = Math.Round(r.area, 3),
+                }).ToList(),
+            });
         foreach (var g in union.ThinRaised.GroupBy(t => t).OrderBy(g => g.Key.from).ThenBy(g => g.Key.to))
             log.Op("raiseThinRegion", count: g.Count(), extra: new Dictionary<string, object>
             {
@@ -95,7 +140,12 @@ public static class RepairPipeline
             });
         if (union.Shells.Count == 0)
         {
-            log.Fail("union produced no shell; writing each object as its own shell instead");
+            var all = PlanBox.Of(solids.SelectMany(s => s.Vertices).Select(Plan));
+            log.Fail($"union produced no shell; writing each of the {solids.Count} objects as its own shell instead (within {all})");
+            log.Op("rebuildShells", count: solids.Count, extra: new Dictionary<string, object>
+            {
+                ["fallback"] = "perObject", ["bbox_m"] = all.ToArray(),
+            });
             return PerObjectShells(solids, log);
         }
         foreach (var g in solids.Select((s, i) => (s, i)).GroupBy(p => p.s.Block).OrderBy(g => g.Key, StringComparer.Ordinal))
@@ -104,16 +154,27 @@ public static class RepairPipeline
             if (objs.Count > 1 && objs.Select(p => union.SolidShell[p.i]).Distinct().Count() == 1)
                 log.Op("mergeStackedFloors", block: g.Key, count: objs.Count);
         }
+        // Touching contacts, by the shell of the first block on one side.
+        var shellOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < union.Shells.Count; i++)
+            foreach (var b in union.Shells[i].Blocks) shellOf.TryAdd(b, i);
+        var contacts = new int[union.Shells.Count];
+        foreach (var t in touching.Select(t => (t.a, t.b)).Distinct())
+            if (shellOf.TryGetValue(t.a.Split('+')[0], out var si)) contacts[si]++;
         for (var i = 0; i < union.Shells.Count; i++)
             if (union.Shells[i].Blocks.Count > 1)
-                log.Op("unionBlocks", count: union.Shells[i].Blocks.Count,
-                    extra: new Dictionary<string, object> { ["shell"] = $"shell_{i:000}", ["blocks"] = union.Shells[i].Blocks });
+            {
+                var extra = new Dictionary<string, object> { ["shell"] = $"shell_{i:000}", ["blocks"] = union.Shells[i].Blocks };
+                if (contacts[i] > 0) extra["pointContacts"] = contacts[i];
+                log.Op("unionBlocks", count: union.Shells[i].Blocks.Count, extra: extra);
+            }
         log.Op("rebuildShells", count: union.Shells.Count);
         var shells = union.Shells;
         for (var i = 0; i < shells.Count; i++)
         {
             var check = ShellCheck.Check(shells[i].Vertices, shells[i].Triangles);
-            if (!check.Ok) log.Fail($"shell_{i:000}: not a valid closed shell ({check})");
+            if (!check.Ok)
+                log.Fail($"shell_{i:000}: not a valid closed shell ({check}), at {PlanBox.Of(shells[i].Vertices.Select(Plan))}");
         }
         // Own check of the output against minEdge (a failure here is reported, never hidden) and a count of
         // triangles thinner than minAngleDeg, which v0.1 does not grade (D-025).
@@ -128,7 +189,7 @@ public static class RepairPipeline
                 foreach (var (p, q) in new[] { (a, b), (b, c), (c, a) })
                 {
                     var len = (q - p).Length;
-                    if (len < shortest) (shortest, where) = (len, $"shell_{i:000}");
+                    if (len < shortest) (shortest, where) = (len, $"shell_{i:000} at {PlanBox.Of(new[] { Plan(p), Plan(q) })}");
                 }
                 if (MinAngleDeg(a, b, c) < tol.MinAngleDeg) thin++;
             }
@@ -140,6 +201,8 @@ public static class RepairPipeline
                      "narrow walls, thin roof pieces); not graded in v0.1 (D-025)");
         return shells;
     }
+
+    private static P2 Plan(Vec3 v) => new(v.X, v.Y);
 
     /// <summary>Smallest angle of a triangle, in degrees.</summary>
     public static double MinAngleDeg(Vec3 a, Vec3 b, Vec3 c)

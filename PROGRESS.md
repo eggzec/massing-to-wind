@@ -35,9 +35,61 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
 | M4 Hard faults | ✅ Criteria met; feature-freeze gate held for owner decisions R1 and Q-S1 (approved, being implemented) | 291/291 (unseen seeds 870/870; hidden 290/290) | 2026-11-21 |
-| M5 Package | Not started | — | — |
+| M5 Package | In progress: solver problems 1–3 done (`solve/m5`); `roofStep` check waits for the R1 merge | 291/291 (unseen 870/870) | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · solver · M5 problems 1–3: runtime, warnings that say where, report detail independent of the object split
+- **1. Runtime.** New `SyntheticCity` (tests, fixed seed): city blocks of two terraced rows with shared walls, houses
+  0.1–0.9 m apart now and then, alleys and gardens over 1 m, streets 12–18 m, varied heights, set-back tiers and a
+  few raised slabs; as one object and as one object per part; optionally city blocks turned by up to 8° with
+  heights to 1 cm (many more roof levels).
+  - Profiled with Stopwatch per phase. The terms growing faster than linear: (a) the baked plan held one outline
+    per roof level, 168k segments, mostly identical copies; (b) face labelling looped over every fill (69k gap
+    bridges, 629 distinct); (c) gap closing rebuilt components and walls of the whole plan at every level and tested
+    all wall pairs; (d) crossing tests swept on X only; (e) point location scanned all faces. All changed so the
+    result is the same (D-038).
+  - Times (this machine, Release, 500 blocks): **1.15 s** axis-aligned (was 9.0 s), **1.37 s** rotated (was
+    30.3 s); 2000 parts 4.2 s. In the Debug test build: 1.3–2.6 s. Test limit 15 s (3× the 5 s target), as one
+    object and as many. From the speed-ups seen (7.8× to 22×), the owner's 50 s district should take about 2.5–6.5 s;
+    I cannot measure it.
+  - Small cases pay about 1 ms more (warm, in-process: mean 6.2 ms vs 5.1 ms over the 290 visible cases; in the
+    CLI run, with JIT, mean 18.6 ms vs 9.0 ms measured today before the change).
+  - **Guard:** `repaired.obj` byte-identical before and after on all 291 visible cases and the unseen sets (seeds
+    777, 2024, 99991: 870 cases), and against the old solver on synthetic cities of 250 and 500 parts. The one
+    possible difference (curved outlines bending more than 5 mm from a wall's chord) is in D-038.
+- **2. Warnings that say where** (D-040). Each region warning gives the plan box `[xmin, ymin, xmax, ymax]` in local
+  coordinates and an area or count: support fill (per block: regions, m², box), holes left open, the per-object
+  fallback, unbridged gaps, sloped triangles, untriangulated roofs, invalid shells, a short output edge, a block
+  below ground. Operation entries: **new op `fillUnsupported`** (block, `count` regions, `area_m2`, `bbox_m`,
+  `regions[]`); `closeHoles` gains `leftOpen` / `leftOpenRegions`; the fallback logs `rebuildShells` with
+  `fallback` and `bbox_m`; `closeGap` gains `bbox_m`; `unionBlocks` gains `pointContacts`. No field renamed or
+  removed. The owner may veto the new op name (then the data moves to `rebuildShells`).
+- **3. Same report for one object or many** (D-039). An object holding several separate closed solids is split into
+  parts `<object>#k`, each repaired as an object of its own would be (the ground snap still moves the whole object).
+  Parts meeting only at a point are filled there as before but reported as `pointContacts` on `unionBlocks`;
+  `closeGap` now lists only real gaps (width > 0) with width and `bbox_m`.
+  - Test: the same city as one object and as one object per part gives byte-identical `repaired.obj` and the same
+    operations, every field equal except block names (120 parts both layouts, 500 parts both layouts).
+  - Visible reports: `closeGap` gains `bbox_m` (70 cases); two cases (`case_0202`, `case_0302`) hold an object with
+    two solids 0.17 m apart and now report `closeGap [B01#1, B01#2]` plus `unionBlocks` instead of
+    `closeGap [B01, B01]`, with a note. No other report change; `solverVersion` 0.7.0.
+- **5. `KNOWN_LIMITATIONS.md`:** new Solver section: canopies filled down (`partial`, now located), sloped roofs not
+  represented (`partial`), output slivers (D-035), flush volume change (D-030/D-037), jogs by least change (D-034),
+  object splits (D-039), curved outlines (D-038), and the measured runtime.
+- Tests: 76 solver tests (+14): 500-block timing (two layouts, both object splits, same output), one object vs many
+  (120 parts, two layouts), fast gap closing vs full scan (`GapCloser.FullScan`, two layouts), city determinism,
+  7 location/union tests (canopy region and op, map coordinates, two regions, gap box, corner contact, split object,
+  JSON form).
+- validate (`scripts/validate.ps1`): build ✅ · tests 2479/2479 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 76) · cases 291/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 30/30 · farCoordinates 31/31 · flippedFaces 29/29 ·
+  floatingBlock 30/30 · openSurface 31/31 · overlap 29/29 · shortEdge 30/30 · sliver 30/30 · smallGap 31/31 ·
+  stackedFloors 32/32 · sunkBlock 30/30 · touchingWalls 30/30. All 291 reports `repaired`. Unseen: 290/290 for each
+  of seeds 777, 2024, 99991.
+- **4. `roofStep` results:** not yet: `main` has not moved since `658cc96` (the generator's R1 branch is not merged).
+  After the merge I merge `main` into `solve/m5`, validate and report the `roofStep` pass count and worst margin.
+- Next: problem 4 after the owner merges R1. Blockers: none (owner decision wanted on the `fillUnsupported` op name).
 
 ### 2026-11-22 · owner · R1 written into AGREEMENT.md; lock moved; branches for the M4 gate work
 - R1 action 1 done. AGREEMENT.md has a new paragraph under the tolerance table: *"Roof steps below `minEdge`: roof

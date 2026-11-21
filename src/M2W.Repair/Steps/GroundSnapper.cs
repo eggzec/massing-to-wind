@@ -17,7 +17,7 @@ public static class GroundSnapper
     public static List<Move> Snap(IReadOnlyList<Solid> solids, double groundSnap)
     {
         var moves = new List<Move>();
-        foreach (var group in solids.GroupBy(s => s.Block).OrderBy(g => g.Key, StringComparer.Ordinal))
+        foreach (var group in solids.GroupBy(s => s.Group).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var minZ = group.SelectMany(s => s.Vertices).Select(v => v.Z).DefaultIfEmpty(0).Min();
             if (minZ == 0 || Math.Abs(minZ) > groundSnap + 1e-9) continue;

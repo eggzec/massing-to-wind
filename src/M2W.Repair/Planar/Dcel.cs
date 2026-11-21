@@ -158,6 +158,53 @@ public sealed class Dcel
         };
     }
 
+    private (double x0, double y0, double cell, Dictionary<(long, long), List<int>> cells, List<int> big)? _faceIndex;
+
+    /// <summary>
+    /// The first bounded face (lowest number) whose outer ring contains q and none of whose holes does; 0 if none.
+    /// Candidates come from a grid of the faces' bounding boxes, built on first use.
+    /// </summary>
+    public int Locate(P2 q)
+    {
+        var (x0, y0, cell, cells, big) = _faceIndex ??= BuildFaceIndex();
+        var key = ((long)Math.Floor((q.X - x0) / cell), (long)Math.Floor((q.Y - y0) / cell));
+        var cand = cells.TryGetValue(key, out var list) ? list.Concat(big).OrderBy(f => f) : big.AsEnumerable();
+        foreach (var g in cand)
+            if (Contains(Ring(FaceOuter[g]), q) && !FaceHoles[g].Any(c => Contains(Ring(c), q)))
+                return g;
+        return 0;
+    }
+
+    private (double, double, double, Dictionary<(long, long), List<int>>, List<int>) BuildFaceIndex()
+    {
+        var boxes = new (double x0, double y0, double x1, double y1)[FaceCount];
+        double minX = double.PositiveInfinity, minY = double.PositiveInfinity, sum = 0;
+        for (var f = 1; f < FaceCount; f++)
+        {
+            var r = Ring(FaceOuter[f]);
+            boxes[f] = (r.Min(p => p.X), r.Min(p => p.Y), r.Max(p => p.X), r.Max(p => p.Y));
+            minX = Math.Min(minX, boxes[f].x0); minY = Math.Min(minY, boxes[f].y0);
+            sum += Math.Max(boxes[f].x1 - boxes[f].x0, boxes[f].y1 - boxes[f].y0);
+        }
+        var cell = Math.Max(FaceCount > 1 ? sum / (FaceCount - 1) : 1, 1e-3);
+        if (double.IsInfinity(minX)) { minX = 0; minY = 0; }
+        var cells = new Dictionary<(long, long), List<int>>();
+        var big = new List<int>();
+        for (var f = 1; f < FaceCount; f++)
+        {
+            long cx0 = (long)Math.Floor((boxes[f].x0 - minX) / cell), cx1 = (long)Math.Floor((boxes[f].x1 - minX) / cell);
+            long cy0 = (long)Math.Floor((boxes[f].y0 - minY) / cell), cy1 = (long)Math.Floor((boxes[f].y1 - minY) / cell);
+            if ((cx1 - cx0 + 1) * (cy1 - cy0 + 1) > 256) { big.Add(f); continue; }
+            for (var cx = cx0; cx <= cx1; cx++)
+            for (var cy = cy0; cy <= cy1; cy++)
+            {
+                if (!cells.TryGetValue((cx, cy), out var l)) cells[(cx, cy)] = l = new List<int>();
+                l.Add(f);
+            }
+        }
+        return (minX, minY, cell, cells, big);
+    }
+
     /// <summary>Even-odd point in polygon (point assumed not on the boundary).</summary>
     public static bool Contains(IReadOnlyList<P2> ring, P2 q)
     {

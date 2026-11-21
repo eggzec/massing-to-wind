@@ -13,6 +13,72 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-040 · 2026-11-22 · solver (M5) · Region warnings carry a plan box and an area or count; one new op, `fillUnsupported`
+- Context: with a district in one object, "block X has no support below part of it" could not be found (owner
+  benchmark, 2026-11-21, problem 2). The owner approved adding fields, not renaming or removing any.
+- Choice: every warning about a place states its plan box `[xmin, ymin, xmax, ymax]` (local coordinates, 3
+  decimals) and its area or count: support fill (per block: regions, total m², box), holes left open (open edges,
+  box), per-object fallback (objects, box), gaps that could not be bridged, sloped triangles, roofs that could not be
+  triangulated, invalid output shells, an output edge below `minEdge`, a block below ground beyond `groundSnap`.
+  Where an operation was done, the same goes in its entry: a **new** op `fillUnsupported` (block, `count` regions,
+  `area_m2`, `bbox_m`, `regions[]`), `closeHoles` gains `leftOpen` and `leftOpenRegions[]` (and is logged when holes
+  are only left open), the fallback logs `rebuildShells` with `fallback: "perObject"` and `bbox_m`, `closeGap` gains
+  `bbox_m` (the bridges, or the near walls), `unionBlocks` gains `pointContacts`. Pure diagnostics stay in the text.
+- Alternatives: fields on `rebuildShells` for everything (one op for unrelated events); a `warnings` object format
+  (changes a JSON field, needs the owner and schema 0.2).
+- Why: the fill down is an operation the solver performs and changes geometry, so it gets an entry like the other
+  repairs; adding an op name renames or removes nothing. **Owner may veto the new op name**; the data would then move
+  to `rebuildShells`.
+- Revisit if: readers want warnings as objects (schema 0.2).
+
+## D-039 · 2026-11-22 · solver (M5) · An object holding several closed solids is split into parts; touching parts are unions
+- Context: report detail depended on the object split (owner benchmark, problem 3): one object gave one `closeGap`
+  of width 0 and no `unionBlocks`; one object per part gave 244 `closeGap` entries of width 0.
+- Choice: (1) before welding, an object is split into parts when its polygons (on a welded copy, joined across edges
+  used by exactly two polygons) form two or more components that are each closed; each part keeps the object's
+  original vertices and polygons in order and is repaired exactly as an object of its own would be. Parts are named
+  `<object>#<k>` (zero-padded, in order of first polygon), each its own block; the ground snap still moves the
+  original object as one (as before). A note says the object was split. (2) A gap of width below 1e-6 m is two parts
+  meeting at a point: it is still filled at the contact (geometry unchanged), but reported as `pointContacts` on the
+  shell's `unionBlocks`, not as `closeGap`. `closeGap` now only lists real gaps, with width and `bbox_m`.
+  Two solids sharing a whole face (touching houses of one height share a wall) cut each copy of the face off its
+  solid (all its edges are used four times); such fragments are joined with the fragment whose open edges they run
+  the other way round (found by the 500-block test).
+- Effect: the same geometry as one object or as N objects gives byte-identical `repaired.obj` and the same
+  operations, all fields equal except block names (tested at 120 and 500 parts, axis-aligned and rotated). Visible
+  cases: `repaired.obj` unchanged; two cases (`case_0202`, `case_0302`) hold an object with two solids 0.17 m apart
+  and now report `closeGap [B01#1, B01#2]` and their `unionBlocks` instead of `closeGap [B01, B01]`.
+- Alternatives: split by vertex connectivity (joins touching solids); always split (breaks objects with open
+  surfaces, e.g. `openSurface` cases); split by plan regions after the union (loses the input's part identity).
+- Why: a closed component is a solid by itself; requiring all parts closed leaves broken objects as before.
+- Revisit if: one-object exports with open surfaces need the same independence (they stay one part today).
+
+## D-038 · 2026-11-22 · solver (M5) · Runtime: work only where it is needed; output unchanged
+- Context: a real district (about 500 parts, 8.4k triangles) took about 50 s; a synthetic 500-block city 9 s
+  (axis-aligned) and 30 s (rotated blocks, heights to 1 cm). Profiling (Stopwatch per phase) found terms that grow
+  with roof levels × plan edges: the baked plan held one outline per level (168k mostly identical segments);
+  face labelling looped over every fill (69k gap bridges, 629 distinct); gap closing rebuilt components and walls for
+  the whole plan at every level and tested all wall pairs; crossings swept on X only; point location scanned all faces.
+- Choice, each kept to give the same result:
+  1. the planarizer holds coincident segments once with all their tags (and a copy count for the snap counter);
+     crossings and gap wall pairs come from a uniform grid, processed in the old order;
+  2. the bake is one edge list, each edge tagged with the two ends of its run of levels (XOR-linear, so labels
+     stay small); label loops visit set bits only;
+  3. identical non-cut fills (a bridge found again on every lower level) are held once at their highest level;
+  4. gap closing sweeps the levels top down with one union-find and builds only the walls through plan edges that
+     are within `minGap` + 1 cm of an edge of another component; results repeated with identical walls are reused;
+  5. point location uses a grid of face boxes (same first face).
+- Guard: byte-identical `repaired.obj` on all 291 visible cases and the unseen sets (seeds 777, 2024, 99991; 870
+  cases), and on synthetic cities of 250 and 500 parts against the old solver. A test switch (`GapCloser.FullScan`)
+  runs the old full scan; a test checks both agree.
+- The one possible difference: a wall is a chain of nearly collinear edges measured along its chord. If a chain
+  bends more than 5 mm from its chord (a curved outline), a pair of walls whose chords are within `minGap` while their
+  edges are not is no longer bridged. That is the true distance; no visible or unseen case has such an outline.
+- Result (this machine, Release): 500 blocks 1.15 s axis-aligned, 1.37 s rotated (was 9.0 s and 30.3 s); 2000 parts
+  4.2 s. Test limit 15 s (3× the 5 s target).
+- Revisit if: gap levels dominate (each level with a gap still builds its near walls); then build walls once per
+  plan and update them per level.
+
 ## D-037 · 2026-11-22 · owner (M4 gate) · Roof steps below `minEdge` are flushed to the higher roof, and expected answers include it
 - Context: neighbouring roofs whose heights differ by less than `minEdge` leave a wall step with edges shorter than
   `minEdge`. The expected answers kept the step, so no valid output could match them exactly. The solver already

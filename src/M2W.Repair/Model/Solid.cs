@@ -34,17 +34,24 @@ public readonly record struct Tri(int A, int B, int C)
 /// </summary>
 public sealed class Solid
 {
-    public Solid(string name, string block)
+    public Solid(string name, string block, string? group = null)
     {
         Name = name;
         Block = block;
+        Group = group ?? block;
     }
 
-    /// <summary>The input object name, e.g. <c>B01_F03</c>.</summary>
+    /// <summary>The input object name, e.g. <c>B01_F03</c>, or <c>name#k</c> for part k of an object that holds
+    /// several separate solids (<see cref="Steps.PartSplitter"/>).</summary>
     public string Name { get; }
 
-    /// <summary>The block the object belongs to: <c>B01</c> for <c>B01_F03</c>, otherwise the object name.</summary>
+    /// <summary>The block the object belongs to: <c>B01</c> for <c>B01_F03</c>, otherwise the object name (a part
+    /// of a split object is a block of its own). Reports name blocks.</summary>
     public string Block { get; }
+
+    /// <summary>What moves together in the ground snap: the block, or for the parts of a split object, the block of
+    /// the object they came from (as before the split).</summary>
+    public string Group { get; }
 
     public List<Vec3> Vertices { get; } = new();
 
