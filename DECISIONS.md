@@ -13,6 +13,26 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-036 · 2026-11-21 · solver (M4) · Final phase: bake the height field into level outlines, then snap only those
+- Context: the randomised properties showed that snapping the raw plan (solid level boundaries plus fill polygons
+  for gap bridges, thin regions and jogs) at `minEdge` is fragile: bending a fill's edge onto a point up to
+  `minEdge` away can fold a narrow bridge onto itself; keeping fills straight leaves slivers between a fill and a
+  bent wall; either way the output was not a fixpoint (a second repair changed it).
+- Choice: all plan repairs run at weld precision until nothing changes. Then the height field is baked: one fill
+  per roof level z with the outline of "height ≥ z", built from the plan's edges; the solids and earlier fills are
+  dropped. Only these nested outlines are snapped (points merge, segments split at points, both at `minEdge`). If
+  the snapped plan shows a gap, a thin region or a jog, it becomes the new base (baked again), the repair is added,
+  and the loop repeats (at most 12 builds; then `partial`). Which solid is in which shell is found by locating an
+  interior point of each face of the last plan built from the solids. Also: roof flushing (D-030) now groups faces
+  meeting at a vertex and equal heights, and repeats until stable; thin regions (D-034) take the higher roof they
+  share the longest boundary with; gap bridges (D-032) must survive snapping (facing strips at least `minEdge`
+  long; fillets as one hull of the wall parts within `minGap + minEdge`).
+- Alternatives: repeat the whole repair on its own output until stable (hides why it changes); rigid fills (tried:
+  slivers); snapping as a mesh edge-collapse step (needs manifold checks after every collapse).
+- Why: after snapping, all points are at least `minEdge` apart and from every segment, so snapping again is a
+  no-op; repairs never see a half-snapped fill. Found and checked by the Step8 properties.
+- Revisit if: a case needs more than 12 builds (reported in warnings).
+
 ## D-035 · 2026-11-21 · solver (M4) · Output slivers are reported, not removed
 - Context: 100 of 291 outputs contain triangles below `minAngleDeg` (long low walls, tall narrow walls, thin roof
   pieces). The `sliver` fault itself is gone: the output is rebuilt from the plan, input triangles never survive.
@@ -35,6 +55,7 @@ Template:
   cases: ledges exact, bumps exact, two jogs at 19 % and 32 % of the tolerance where the fault had moved the
   other piece. Reading the generator's rule would tune the solver to the grader.
 - Revisit if: hidden cases fail on jogs close to `minEdge` deep along long walls.
+- Revised by D-036: a thin region takes the higher roof it shares the longest boundary with.
 
 ## D-033 · 2026-11-21 · solver (M4) · No plan edge shorter than minEdge: final plan merged at minEdge, by priority
 - Context: after the outline rules some short edges remain (several in a row, kinks, crossings).
@@ -47,6 +68,7 @@ Template:
   block across a narrow gap (found by the FsCheck property), or shave half a ledge off.
 - Revisit if: snapping is ever seen to change topology (a courtyard closing); the solver's own check reports any
   edge below `minEdge` as `partial`.
+- Revised by D-036: only baked level outlines are snapped, never fills on their own.
 
 ## D-032 · 2026-11-21 · solver (M4) · Gap closing: per-level closing between components, strips for facing walls
 - Context: AGREEMENT.md: "gaps narrower than minGap are closed and the blocks merged". A disk closing of the plan
@@ -63,6 +85,7 @@ Template:
   for gaps between blocks.
 - Revisit if: hidden cases need inlets or narrow courtyards closed, or curved/sharply non-parallel gaps need a
   better bridge than a hull.
+- Revised by D-036: bridges must survive snapping (strip length and fillet reach).
 
 ## D-027 · 2026-11-19 · solver (M3) · Per-object vertex lists; own polygon geometry, no Clipper
 - Context: blocks that touch may share or nearly share vertices; ground snap and welding must not move another
@@ -100,6 +123,7 @@ Template:
 - Why: raising keeps the true maximum height (graded to 0.01 m) and changes volume by at most step × roof area;
   global snapping would wrongly change the height of separate blocks.
 - Revisit if: a case needs the lower roof kept (the volume change would show it).
+- Revised by D-036: faces meeting at a vertex and equal heights are grouped too; repeated until stable.
 
 ## D-031 · 2026-11-19 · solver (M3) · Optimal triangulation for roofs up to 150 vertices
 - Context: greedy ear clipping stranded nearly collinear vertices (B03's corners on B02's roof edge) and was forced

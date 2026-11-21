@@ -139,60 +139,87 @@ public sealed class HeightFieldUnion
         // Gaps are bridged before snapping, so a gap narrower than minEdge is filled to the lower block, not shut by
         // moving the taller block's wall.
         var fills = new List<Fill>();
+        var baseSegs = segs;
+        var baseTags = tags;
         Plan plan;
-        var phase = 0; // 0 = weld precision, 1 = snapped to minEdge
-        var thinDone = false;
+        Plan solidPlan = null!; // the last plan built from the solids themselves: knows which solid covers each face
+        var snapped = false;
         Func<P2, double>? cornerOf = null;
         var unbridged = new SortedSet<string>(StringComparer.Ordinal);
         for (var round = 0; ; round++)
         {
-            plan = BuildPlan(segs, tags, fills, phase == 1 ? _planTol : _tol, phase == 1 ? cornerOf : null);
+            plan = BuildPlan(baseSegs, baseTags, fills, snapped ? _planTol : _tol, snapped ? cornerOf : null);
+            if (baseTags.Count > 0) solidPlan = plan;
             if (round == MaxRounds)
             {
-                res.Problems.Add($"plan repairs (gap closing, thin regions) did not settle after {MaxRounds} rounds");
+                res.Problems.Add($"plan repairs (gap closing, thin regions, short edges) did not settle after {MaxRounds} rounds");
                 break;
             }
-            var found = _minGap > 0 ? GapCloser.Find(plan.Dcel, plan.Height, _minGap, _tol) : new GapCloser.Found();
+            var added = new List<Fill>();
+            var found = _minGap > 0 ? GapCloser.Find(plan.Dcel, plan.Height, _minGap, _tol, _planTol) : new GapCloser.Found();
             foreach (var gap in found.Gaps)
             {
-                var pair = new[] { BlocksOf(plan, gap.FaceA), BlocksOf(plan, gap.FaceB) };
+                var pair = new[] { BlocksOf(plan, solidPlan, gap.FaceA), BlocksOf(plan, solidPlan, gap.FaceB) };
                 if (!gap.Bridged)
                     unbridged.Add($"gap of {gap.Width:0.###} m between {pair[0]} and {pair[1]} at {gap.Z:0.###} m could not be bridged");
                 else
                     res.ClosedGaps.Add((pair[0], pair[1], gap.Width, gap.Z));
             }
-            if (found.Bridges.Count > 0)
-            {
-                fills.AddRange(found.Bridges.Select(b => new Fill(new[] { b.Ring }, b.Z)));
-                continue;
-            }
-            if (phase == 0 && !thinDone && _planTol > _tol)
+            added.AddRange(found.Bridges.Select(b => Fill.FromRings(new[] { b.Ring }, b.Z)));
+            if (added.Count == 0 && _planTol > _tol)
             {
                 var thin = ThinRegions(plan);
                 res.ThinRaised.AddRange(thin.Select(t => (t.from, t.fill.Z)));
-                fills.AddRange(thin.Select(t => t.fill));
-                if (thin.Count > 0) continue; // raising may open new gaps or leave a new thin region: look again
+                added.AddRange(thin.Select(t => t.fill));
+            }
+            if (added.Count == 0 && _planTol > _tol)
+            {
                 var jogs = ShortOutlineEdges(plan);
                 foreach (var (kind, _) in jogs) res.OutlineFills[kind] = res.OutlineFills.TryGetValue(kind, out var n) ? n + 1 : 1;
-                fills.AddRange(jogs.Select(j => j.fill));
-                if (jogs.Count > 0) continue;
-                thinDone = true;
+                added.AddRange(jogs.Select(j => j.fill));
             }
-            if (phase == 0 && _planTol > _tol) { phase = 1; cornerOf = Corners(plan); continue; }
+            if (added.Count > 0)
+            {
+                // Snapping left a gap, a thin region or a jog: the snapped plan becomes the base, repaired at weld
+                // precision, then snapped again.
+                if (snapped) Rebase(plan);
+                fills.AddRange(added);
+                continue;
+            }
+            if (!snapped && _planTol > _tol)
+            {
+                // Bake everything into one outline per roof level and snap those together, so no bridge or other
+                // fill is ever snapped on its own (a narrow one could fold or detach).
+                cornerOf = Corners(plan);
+                Rebase(plan);
+                snapped = true;
+                continue;
+            }
             break;
+        }
+        void Rebase(Plan p)
+        {
+            fills = SliceFills(p);
+            baseSegs = new List<(P2 a, P2 b, int tag)>();
+            baseTags = new List<Tag>();
+            snapped = false;
         }
         res.Problems.AddRange(unbridged);
         res.ShortEdgeSnaps = plan.Snapped;
-        var (pedges, pts, dcel, height, covers) = (plan.Edges, plan.Points, plan.Dcel, plan.Height, plan.Covers);
-        if (plan.Inconsistent > 0)
-            res.Problems.Add($"plan labelling inconsistent on {plan.Inconsistent} edges (a level boundary is not closed)");
-        foreach (var b in plan.FilledUnder.Select(s => _solids[s].Block).Distinct())
+        if (!ReferenceEquals(plan, solidPlan) && plan.Inconsistent > 0)
+            res.Problems.Add($"snapped plan labelling inconsistent on {plan.Inconsistent} edges");
+        var (pedges, pts, dcel, height) = (plan.Edges, plan.Points, plan.Dcel, plan.Height);
+        if (solidPlan.Inconsistent > 0)
+            res.Problems.Add($"plan labelling inconsistent on {solidPlan.Inconsistent} edges (a level boundary is not closed)");
+        foreach (var b in solidPlan.FilledUnder.Select(s => _solids[s].Block).Distinct())
             res.Problems.Add($"block {b} has no support below part of it (it floats beyond groundSnap); filled down to the ground");
-        foreach (var s in plan.OpenSolids)
+        foreach (var s in solidPlan.OpenSolids)
             res.Problems.Add($"object {_solids[s].Name}: horizontal faces do not close (open above or below)");
 
         // ---- 4b. steps lower than minEdge between neighbouring roofs: raise the lower roof to the higher one
-        if (_minEdge > 0) FlushSmallSteps(dcel, height, res);
+        // Repeated until stable: raising a roof can bring it within minEdge of another one.
+        if (_minEdge > 0)
+            for (var i = 0; i < dcel.FaceCount && FlushSmallSteps(dcel, height, res); i++) { }
 
         // ---- 5. keep edges where the height changes; merge collinear chains
         var kept = new List<KeptEdge>();
@@ -267,11 +294,17 @@ public sealed class HeightFieldUnion
             Builder(higherFace).AddWall(u, v, Column(heightsAt[u], lo, hi), Column(heightsAt[v], lo, hi));
         }
 
-        // Which shell each solid is in (the shell of the first face it covers, in face order).
-        for (var f = 0; f < dcel.FaceCount; f++)
-            foreach (var s in covers[f])
-                if (res.SolidShell[s] < 0 && height[f] > 0 && shellIds.TryGetValue(shellOfFace[f], out var id))
-                    res.SolidShell[s] = id;
+        // Which shell each solid is in: the shell of the first face it covers in the last plan built from the solids
+        // (in face order), found in the final plan by an interior point of that face. A solid whose faces all
+        // vanished in snapping (thinner than minEdge) is in no shell.
+        for (var g = 1; g < solidPlan.Dcel.FaceCount; g++)
+        {
+            if (solidPlan.Height[g] <= 0 || solidPlan.Covers[g].All(s => res.SolidShell[s] >= 0)) continue;
+            var f = ReferenceEquals(plan, solidPlan) ? g : InteriorPoint(solidPlan.Dcel, g) is { } q ? Locate(dcel, q) : 0;
+            if (f <= 0 || height[f] <= 0 || !shellIds.TryGetValue(shellOfFace[f], out var id)) continue;
+            foreach (var s in solidPlan.Covers[g])
+                if (res.SolidShell[s] < 0) res.SolidShell[s] = id;
+        }
 
         for (var i = 0; i < builders.Count; i++)
         {
@@ -384,7 +417,7 @@ public sealed class HeightFieldUnion
             var ring = new[] { pts[s1.From], pts[w.From], pts[w.To], pts[s2.To] };
             if (Math.Abs(Triangulator.SignedArea(ring)) <= _tol * _tol) continue;
             foreach (var x in new[] { w, s1, s2, pw, nw }) used.Add(x);
-            result.Add((bump ? "cutBump" : "fillNotch", new Fill(new[] { (IReadOnlyList<P2>)ring }, bump ? w.Lo : w.Hi, bump)));
+            result.Add((bump ? "cutBump" : "fillNotch", Fill.FromRings(new[] { (IReadOnlyList<P2>)ring }, bump ? w.Lo : w.Hi, bump)));
         }
         foreach (var s in walls)
         {
@@ -425,7 +458,7 @@ public sealed class HeightFieldUnion
             }
             if (Math.Abs(Triangulator.SignedArea(ring)) <= _tol * _tol) continue;
             used.Add(s); used.Add(pw); used.Add(nw);
-            result.Add((cut ? kind + "Cut" : kind, new Fill(new[] { (IReadOnlyList<P2>)ring }, cut ? s.Lo : s.Hi, cut)));
+            result.Add((cut ? kind + "Cut" : kind, Fill.FromRings(new[] { (IReadOnlyList<P2>)ring }, cut ? s.Lo : s.Hi, cut)));
         }
         return result;
     }
@@ -474,16 +507,22 @@ public sealed class HeightFieldUnion
     }
 
     /// <summary>
-    /// A region (inside an odd number of its rings) filled from the ground up to <see cref="Z"/>, or, when
-    /// <see cref="Cut"/>, cut down to <see cref="Z"/>. Cuts apply after all fills.
+    /// A region (inside an odd number of its segments, which form closed rings) filled from the ground up to
+    /// <see cref="Z"/>, or, when <see cref="Cut"/>, cut down to <see cref="Z"/>. Cuts apply after all fills.
+    /// <see cref="Lo"/> is the lowest level its outline stands for (merge priority in the snapped plan).
     /// </summary>
-    private sealed record Fill(IReadOnlyList<IReadOnlyList<P2>> Rings, double Z, bool Cut = false);
+    private sealed record Fill(IReadOnlyList<(P2 a, P2 b)> Segs, double Z, bool Cut = false, double Lo = 0)
+    {
+        /// <summary>A fill from closed rings (from the ground up, unless a cut).</summary>
+        public static Fill FromRings(IEnumerable<IReadOnlyList<P2>> rings, double z, bool cut = false) =>
+            new(rings.SelectMany(r => r.Select((p, i) => (p, r[(i + 1) % r.Count]))).ToList(), z, cut, cut ? z : 0);
+    }
 
     /// <summary>
     /// Regions of one height (plan faces joined across edges with the same height on both sides) that are thinner
     /// than minEdge, measured as 2 × area / perimeter (the width of a strip), and that touch a higher roof: each is
-    /// raised to the highest roof it touches, as a roof step lower than minEdge is (D-030), so a ledge thinner than
-    /// minEdge becomes part of the block above it and the footprint is kept. A thin region with nothing higher
+    /// raised to the higher roof it shares the longest boundary with, as a roof step lower than minEdge is (D-030),
+    /// so a ledge thinner than minEdge becomes part of the block above it and the footprint is kept. A thin region with nothing higher
     /// beside it (a free-standing thin wall) is left alone.
     /// </summary>
     private List<(double from, Fill fill)> ThinRegions(Plan p)
@@ -500,7 +539,7 @@ public sealed class HeightFieldUnion
         }
         var area = new SortedDictionary<int, double>();
         var perim = new Dictionary<int, double>();
-        var higher = new Dictionary<int, double>();
+        var higher = new Dictionary<int, SortedDictionary<double, double>>(); // region -> higher height -> shared length
         for (var f = 1; f < d.FaceCount; f++)
         {
             if (height[f] <= 0) continue;
@@ -514,13 +553,21 @@ public sealed class HeightFieldUnion
             if (f == 0 || height[f] <= 0) continue;
             var r = Find(f);
             if (g != 0 && Find(g) == r) continue;
-            perim[r] = (perim.TryGetValue(r, out var p0) ? p0 : 0) + (d.Points[d.To[h]] - d.Points[d.From[h]]).Length;
-            if (height[g] > height[f]) higher[r] = Math.Max(higher.TryGetValue(r, out var h0) ? h0 : 0, height[g]);
+            var len = (d.Points[d.To[h]] - d.Points[d.From[h]]).Length;
+            perim[r] = (perim.TryGetValue(r, out var p0) ? p0 : 0) + len;
+            if (height[g] > height[f])
+            {
+                if (!higher.TryGetValue(r, out var byH)) higher[r] = byH = new SortedDictionary<double, double>();
+                byH[height[g]] = byH.GetValueOrDefault(height[g]) + len;
+            }
         }
         var result = new List<(double, Fill)>();
         foreach (var (r, a) in area)
         {
-            if (!higher.TryGetValue(r, out var top) || !perim.TryGetValue(r, out var per) || per <= 0) continue;
+            if (!higher.TryGetValue(r, out var byHeight) || !perim.TryGetValue(r, out var per) || per <= 0) continue;
+            // The higher roof it shares the longest boundary with (a ledge belongs to the block it runs along, not to
+            // a taller block touching its end); ties go to the higher roof.
+            var top = byHeight.OrderByDescending(kv => kv.Value).ThenByDescending(kv => kv.Key).First().Key;
             if (2 * a / per >= _planTol) continue;
             var rings = new List<IReadOnlyList<P2>>();
             for (var f = 1; f < d.FaceCount; f++)
@@ -529,7 +576,7 @@ public sealed class HeightFieldUnion
                 rings.Add(d.Ring(d.FaceOuter[f]));
                 foreach (var c in d.FaceHoles[f]) rings.Add(d.Ring(c));
             }
-            result.Add((height[r], new Fill(rings, top)));
+            result.Add((height[r], Fill.FromRings(rings, top)));
         }
         return result;
     }
@@ -547,7 +594,59 @@ public sealed class HeightFieldUnion
         public SortedSet<int> FilledUnder = new();
     }
 
-    private string BlocksOf(Plan p, int face)
+    /// <summary>The solids covering face f of plan p: its own record, or for a baked plan (which has none) the
+    /// covers of the face of the solid plan that holds an interior point of f.</summary>
+    private static IReadOnlyList<int> CoversAt(Plan p, Plan solidPlan, int f)
+    {
+        if (ReferenceEquals(p, solidPlan)) return p.Covers[f];
+        if (InteriorPoint(p.Dcel, f) is not { } q) return Array.Empty<int>();
+        var g = Locate(solidPlan.Dcel, q);
+        return g > 0 ? solidPlan.Covers[g] : Array.Empty<int>();
+    }
+
+    /// <summary>A point strictly inside face f: the centroid of the largest triangle of its triangulation.</summary>
+    private static P2? InteriorPoint(Dcel d, int f)
+    {
+        if (f <= 0) return null;
+        var outer = d.Ring(d.FaceOuter[f]);
+        var holes = d.FaceHoles[f].Select(c => (IReadOnlyList<P2>)d.Ring(c)).ToList();
+        var tris = new List<Model.Tri>();
+        if (!Triangulator.TryTriangulate(outer, holes, tris) || tris.Count == 0) return null;
+        var all = new List<P2>(outer);
+        foreach (var h in holes) all.AddRange(h);
+        var best = tris.OrderByDescending(t => Math.Abs(P2.Orient(all[t.A], all[t.B], all[t.C]))).First();
+        return (all[best.A] + all[best.B] + all[best.C]) * (1.0 / 3);
+    }
+
+    /// <summary>The bounded face containing q (0 if none).</summary>
+    private static int Locate(Dcel d, P2 q)
+    {
+        for (var g = 1; g < d.FaceCount; g++)
+            if (Dcel.Contains(d.Ring(d.FaceOuter[g]), q) && !d.FaceHoles[g].Any(c => Dcel.Contains(d.Ring(c), q)))
+                return g;
+        return 0;
+    }
+
+    /// <summary>
+    /// The outline of every roof level of a plan as a fill (region "height ≥ z"), so the height field can be built
+    /// again from them alone.
+    /// </summary>
+    private static List<Fill> SliceFills(Plan p)
+    {
+        var d = p.Dcel;
+        var result = new List<Fill>();
+        foreach (var z in p.Height.Where(h => h > 0).Distinct().OrderBy(h => h))
+        {
+            var segs = new List<(P2, P2)>();
+            for (var e = 0; e < p.Edges.Count; e++)
+                if (p.Height[d.FaceOf(2 * e)] >= z != p.Height[d.FaceOf(2 * e + 1)] >= z)
+                    segs.Add((p.Points[p.Edges[e].u], p.Points[p.Edges[e].v]));
+            result.Add(new Fill(segs, z, false, z));
+        }
+        return result;
+    }
+
+    private string BlocksOf(Plan p, Plan solidPlan, int face)
     {
         // The blocks of the slice component containing this face: blocks covering any face joined to it at its height.
         var h = p.Height[face];
@@ -558,7 +657,7 @@ public sealed class HeightFieldUnion
         while (queue.Count > 0)
         {
             var f = queue.Dequeue();
-            foreach (var s in p.Covers[f]) blocks.Add(_solids[s].Block);
+            foreach (var s in CoversAt(p, solidPlan, f)) blocks.Add(_solids[s].Block);
             foreach (var c in FaceCycles(p.Dcel, f))
                 foreach (var he in p.Dcel.Cycles[c])
                 {
@@ -582,9 +681,7 @@ public sealed class HeightFieldUnion
         var all = new List<(P2 a, P2 b, int tag, double lo, double hi)>(segs.Count + fills.Count * 4);
         foreach (var (a, b, t) in segs) all.Add((a, b, t, tags[t].Z, tags[t].Z));
         for (var k = 0; k < fills.Count; k++)
-            foreach (var r in fills[k].Rings)
-                for (var i = 0; i < r.Count; i++)
-                    all.Add((r[i], r[(i + 1) % r.Count], tags.Count + k, fills[k].Cut ? fills[k].Z : 0, fills[k].Z));
+            foreach (var (a, b) in fills[k].Segs) all.Add((a, b, tags.Count + k, fills[k].Lo, fills[k].Z));
         var clusters = new Planarizer(_tol);
         var key = new Dictionary<int, (double lo, double hi)>();
         void Key(P2 p, double lo, double hi)
@@ -593,6 +690,9 @@ public sealed class HeightFieldUnion
             key[id] = key.TryGetValue(id, out var k0) ? (Math.Min(k0.lo, lo), Math.Max(k0.hi, hi)) : (lo, hi);
         }
         foreach (var (a, b, _, lo, hi) in all) { Key(a, lo, hi); Key(b, lo, hi); }
+        // Points merge at planTol, and segments are split at points within planTol: in the snapped plan all points
+        // end up at least minEdge apart and from every segment, so no edge can be shorter and snapping again changes
+        // nothing.
         var planarizer = new Planarizer(planTol, reportAbove: _tol);
         // Ties on the lowest outline go to the sharper corner of the weld-precision plan, so collapsing a short jog
         // moves the nearly straight point, not a corner of a long wall.
@@ -677,20 +777,35 @@ public sealed class HeightFieldUnion
         return plan;
     }
 
-    private void FlushSmallSteps(Dcel d, double[] height, Result res)
+    /// <returns>Whether any height changed.</returns>
+    private bool FlushSmallSteps(Dcel d, double[] height, Result res)
     {
         var parent = Enumerable.Range(0, d.FaceCount).ToArray();
         int Find(int x) { while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
         var any = false;
-        for (var h = 0; h < d.From.Length; h += 2)
+        // Faces meeting at a plan vertex (sharing an edge, or only touching corner to corner) whose roofs differ by
+        // less than minEdge would give that vertex's wall column an edge shorter than minEdge. Equal heights join
+        // too: a roof made of several plan faces is raised as a whole, not only the face that touches the higher
+        // roof (that would leave a new step lower than minEdge next to it).
+        var around = new SortedDictionary<int, SortedSet<int>>();
+        for (var h = 0; h < d.From.Length; h++)
         {
-            int f = d.FaceOf(h), g = d.FaceOf(h ^ 1);
-            var dh = Math.Abs(height[f] - height[g]);
-            if (height[f] <= 0 || height[g] <= 0 || dh == 0 || dh >= _minEdge - 1e-9) continue;
-            int a = Find(f), b = Find(g);
-            if (a != b) { parent[Math.Max(a, b)] = Math.Min(a, b); any = true; }
+            if (!around.TryGetValue(d.From[h], out var set)) around[d.From[h]] = set = new SortedSet<int>();
+            set.Add(d.FaceOf(h));
         }
-        if (!any) return;
+        foreach (var faces in around.Values)
+        {
+            var list = faces.Where(f => height[f] > 0).ToList();
+            for (var i = 0; i < list.Count; i++)
+            for (var j = i + 1; j < list.Count; j++)
+            {
+                int f = list[i], g = list[j];
+                if (Math.Abs(height[f] - height[g]) >= _minEdge - 1e-9) continue;
+                int a = Find(f), b = Find(g);
+                if (a != b) { parent[Math.Max(a, b)] = Math.Min(a, b); any = true; }
+            }
+        }
+        if (!any) return false;
         var groups = Enumerable.Range(0, d.FaceCount).GroupBy(Find).Where(g => g.Count() > 1);
         var steps = new SortedDictionary<(double, double), int>();
         foreach (var g in groups)
@@ -705,6 +820,7 @@ public sealed class HeightFieldUnion
                 }
         }
         foreach (var ((from, to), n) in steps) res.FlushedSteps.Add((from, to, n));
+        return steps.Count > 0;
     }
 
     /// <summary>Width of a triangle's plan projection: twice its plan area over its longest plan edge.</summary>

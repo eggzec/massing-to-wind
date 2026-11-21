@@ -29,10 +29,59 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
-| M4 Hard faults | In progress: steps 1–3 done (gaps, short edges/slivers, combined) | 291/291 | 2026-11-21 |
+| M4 Hard faults | ✅ Criteria met, ready for the feature-freeze gate | 291/291 (unseen seeds 870/870) | 2026-11-21 |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-21 · solver · M4 step 4: randomised property tests; M4 criteria met
+- New `Step8PropertyTests`: FsCheck properties on random **faulty** sites. 1–4 blocks at random, or placed a random
+  0.02–0.98 m from the previous one; 1–4 floors of random height; a random ledge below or above `minEdge` (30 %);
+  floating/sunk within `groundSnap` (30 %); objects inside out (20 %); duplicate vertices (20 %). Positions carry
+  small per-block offsets so no distance lands within rounding of `minGap` or `minEdge`. The seed comes from three
+  FsCheck integers (one `PositiveInt` stays within about 1–100, so it repeated about 100 sites).
+  1. any site repairs to valid output: `repaired`, closed outward shells, ground at 0, no edge below `minEdge`, no
+     two shells closer than `minGap` (100 cases);
+  2. moving to map coordinates and rotating keeps shell count, Euler number and volume (60 cases);
+  3. repairing the output again changes nothing: same shells, Euler number and volume, and no repair op runs
+     (60 cases).
+  The M3 properties (fault-free sites) are kept. Stress runs: properties 1–3 at 1000/500/500 cases, six times in
+  a row, and property 2 at 1500 cases three times: all pass.
+- The properties found 9 defects, all fixed (each now also a fixed regression test in `Step8RegressionTests`):
+  1. roof steps below `minEdge` were flushed only between faces that differ in height: a roof made of several plan
+     faces was raised in part, leaving a new 0.2 m step. Equal heights now join the group;
+  2. roofs touching only at a corner, 0.1 m apart, gave a 0.1 m vertical edge: faces sharing a vertex now group;
+  3. flushing to a fixpoint: raising a bridge to 3.3 m put it within `minEdge` of a 3.5 m block;
+  4. a thin ledge was raised to the highest neighbour (a taller block touching its end through a gap bridge),
+     building a thin fin above its own block; now to the higher neighbour it shares the longest boundary with;
+  5. overlapping corner fillets left clusters of points closer than `minEdge`, which snapping pinched into a point
+     contact, so gap closing never settled: one convex hull per pair of components now;
+  6. a facing strip only 0.033 m long vanished in snapping: strips shorter than `minEdge` along the walls no longer
+     count, and fillets take the wall parts within `minGap` + `minEdge` (fat enough to survive snapping);
+  7.–9. snapping bent fill polygons (gap bridges) onto points up to `minEdge` away and folded them, while keeping
+     fills straight left slivers between a fill and a bent wall, and the result was not a fixpoint (the second
+     repair snapped again). Fixed by restructuring the final phase (D-036): repairs at weld precision until stable,
+     then the height field is baked into one outline per roof level and only those are snapped; if snapping leaves
+     a gap, thin region or jog, the snapped plan becomes the base and the loop repeats.
+- Tests: 62 solver tests (+8: 3 properties, 5 regression cases).
+- Determinism: two full runs give byte-identical `repaired.obj` for all 291 cases. Runtime: mean 7 ms, max 171 ms
+  per case.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2465/2465 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 62) · cases 291/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 30/30 · farCoordinates 31/31 · flippedFaces 29/29 ·
+  floatingBlock 30/30 · openSurface 31/31 · overlap 29/29 · shortEdge 30/30 · sliver 30/30 · smallGap 31/31 ·
+  stackedFloors 32/32 · sunkBlock 30/30 · touchingWalls 30/30. All 291 reports `repaired`.
+- Unseen sets (`m2w generate --seed N` into a scratch folder, only results read): seed 777 290/290, seed 2024
+  290/290, seed 99991 290/290, all `repaired`.
+- **M4 target (≥ 80 % overall, every failure explained): met** — 291/291 (100 %), no failures to explain. All four
+  M4 items done: gap closing (step 1), sliver and short-edge removal (step 2), combined-fault cases (step 3),
+  randomised properties (this step).
+- Known risks for hidden cases (none fails today): (a) single jogs close to `minEdge` deep along long walls, where
+  the least-change rule may move the other wall than the fault did (worst visible margin 32 %, unseen 50 %;
+  D-034); (b) 100 of 291 outputs still contain triangles below `minAngleDeg` (not graded, reported; D-035);
+  (c) Q-S1 (checker anchor on a shared edge).
+- Next: owner feature-freeze gate for M4. Then M5 (README with results table, KNOWN_LIMITATIONS.md, CI).
+- Blockers: Q-S1 (owner; no case affected right now).
 
 ### 2026-11-21 · solver · M4 step 3: combined-fault cases
 - No solver change was needed: every case with two or more faults passes. By number of faults: 0 → 10/10,

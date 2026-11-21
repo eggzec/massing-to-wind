@@ -10,9 +10,10 @@ namespace M2W.Repair.Union;
 ///
 /// Bridges: for walls that face each other and are nearly parallel, the strip between them over the stretch where
 /// one projects onto the other (a rectangle for parallel walls, so no new vertex appears when the walls end
-/// together). Components with no such pair (for example two blocks meeting corner to corner) get, for every pair of
-/// walls closer than minGap, the convex hull of the parts of each wall that lie within minGap of the other and in
-/// front of it, which is a small fillet like a disk closing would give.
+/// together; a strip shorter than minEdge along the walls does not count). Components with no such pair (for example
+/// two blocks meeting corner to corner) get one convex hull of the parts of their walls that lie within
+/// minGap + minEdge of a wall of the other component and in front of it, a small fillet like a disk closing would
+/// give, wide enough that merging points closer than minEdge cannot pinch it.
 ///
 /// Gaps inside one component (a narrow inlet of a U shape) are not closed: AGREEMENT.md asks for gaps between blocks
 /// to be closed and the blocks merged.
@@ -41,7 +42,9 @@ public static class GapCloser
 
     private sealed record Wall(P2 A, P2 B, int Comp, int Face);
 
-    public static Found Find(Dcel d, double[] height, double minGap, double tol)
+    /// <param name="minEdge">Bridges must survive the final plan, where points closer than this merge: a facing
+    /// strip shorter than this along the walls does not count, and fillets reach this much further.</param>
+    public static Found Find(Dcel d, double[] height, double minGap, double tol, double minEdge = 0)
     {
         var found = new Found();
         if (minGap <= 0) return found;
@@ -80,17 +83,22 @@ public static class GapCloser
                     var ua = Unit(a.B - a.A); var ub = Unit(b.B - b.A);
                     if (P2.Dot(ua, ub) > -cosPar) continue;
                     var r = Strip(a, b, g, tol) ?? Strip(b, a, g, tol);
-                    if (r is not null) rects.Add(r);
+                    if (r is not null && Math.Max((r[3] - r[0]).Length, (r[2] - r[1]).Length) >= Math.Max(minEdge, tol)) rects.Add(r);
                 }
                 var polys = rects;
                 if (polys.Count == 0)
                 {
+                    // One convex hull of every near part, not one hull per pair of walls: overlapping small hulls
+                    // leave clusters of points closer than minEdge, which snapping would pinch to a point contact.
                     polys = new List<P2[]>();
+                    var near = new List<P2>();
                     foreach (var (a, b, _) in pairs)
                     {
-                        var hull = Fillet(a, b, g, tol);
-                        if (hull is not null) polys.Add(hull);
+                        if (NearPart(a, b, g + minEdge) is { } pa && NearPart(b, a, g + minEdge) is { } pb)
+                            near.AddRange(new[] { pa.p, pa.q, pb.p, pb.q });
                     }
+                    var hull = Thick(ConvexHull(near), tol);
+                    if (hull is not null) polys.Add(hull);
                 }
                 var width = pairs.Min(p => p.dist);
                 found.Gaps.Add(new Gap(pairs[0].a.Face, pairs[0].b.Face, width, h, polys.Count > 0));
@@ -195,13 +203,9 @@ public static class GapCloser
         return (Math.Max(lo, a), Math.Min(hi, b));
     }
 
-    /// <summary>Convex hull of the parts of a and b within g of each other and in front of each other; null if thin.</summary>
-    private static P2[]? Fillet(Wall a, Wall b, double g, double tol)
+    /// <summary>The hull as a polygon, or null if it is thinner than the tolerance.</summary>
+    private static P2[]? Thick(List<P2> hull, double tol)
     {
-        var pa = NearPart(a, b, g);
-        var pb = NearPart(b, a, g);
-        if (pa is null || pb is null) return null;
-        var hull = ConvexHull(new[] { pa.Value.p, pa.Value.q, pb.Value.p, pb.Value.q });
         if (hull.Count < 3) return null;
         var area = Math.Abs(Triangulator.SignedArea(hull));
         var diam = 0.0;

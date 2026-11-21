@@ -14,7 +14,7 @@ namespace M2W.Repair;
 /// </summary>
 public sealed class MassingRepairer : ICaseRepairer
 {
-    public const string Version = "0.5.0";
+    public const string Version = "0.6.0";
 
     public RepairOutcome Repair(RepairRequest request)
     {
