@@ -29,10 +29,34 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
-| M4 Hard faults | In progress: steps 1 (gaps) and 2 (short edges, slivers) done | 291/291 | 2026-11-21 |
+| M4 Hard faults | In progress: steps 1–3 done (gaps, short edges/slivers, combined) | 291/291 | 2026-11-21 |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-21 · solver · M4 step 3: combined-fault cases
+- No solver change was needed: every case with two or more faults passes. By number of faults: 0 → 10/10,
+  1 → 240/240, 2 → 14/14, 3 → 13/13, 4 → 14/14.
+- Unseen cases: generated three new full sets with `m2w generate --seed N` into a scratch folder (outside the repo)
+  and ran `run-all` on them, reading only `summary.json`, `result.json`, `report.json` and the inputs (never the
+  generated `expected.json`). Seed 777: 290/290 · seed 2024: 290/290 · seed 99991: 290/290 (seed 1 reproduces the
+  committed set: 290/290 + the example). All reports `repaired`.
+- Margins on the new sets: worst 50 % of the footprint tolerance (seed 2024 `case_0262`), then 45 % (seed 777
+  `case_0364`), 37 % (seed 99991 `case_0253`). All are single jogs where the fault had moved the other wall than
+  the least-change rule moves (D-034). This is the main risk for hidden cases: a jog close to `minEdge` deep along
+  a long wall. I have not switched to "move the longer wall": four cases suggest it, but it has no geometric
+  reason and would be fitted to the grader.
+- Tests: 54 solver tests (+2): one hand-built case with far coordinates, stacked floors with a 0.1 m ledge, a
+  0.4 m gap and a block floating 0.3 m up with all faces flipped and duplicate vertices gives one closed shell
+  with the expected volume, local coordinates, ground at 0, height 9, every op reported and no edge below
+  `minEdge`; the same case is deterministic and a second repair changes nothing.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2457/2457 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 54) · cases 291/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 30/30 · farCoordinates 31/31 · flippedFaces 29/29 ·
+  floatingBlock 30/30 · openSurface 31/31 · overlap 29/29 · shortEdge 30/30 · sliver 30/30 · smallGap 31/31 ·
+  stackedFloors 32/32 · sunkBlock 30/30 · touchingWalls 30/30.
+- Next: M4 step 4, randomised property tests.
+- Blockers: Q-S1 (owner; no case affected right now).
 
 ### 2026-11-21 · solver · M4 step 2: short-edge and sliver removal (shortEdge, sliver)
 - The plan is now repaired in phases before the shells are built (`HeightFieldUnion`), each phase building the
