@@ -42,9 +42,12 @@ You set direction, run gates and keep the loop honest. The agents make the techn
 
 ## Hidden cases
 
-After the M2 gate, run the generator yourself with new seeds into your private folder:
-`dotnet run --project src/M2W.Cli -- generate ../hidden --seed 90001`. Then each evening:
-`dotnet run --project src/M2W.Cli -- run-all ../hidden --out ../hidden-out`. Never put these in the repository.
+After the M2 gate, run the generator yourself with a new private seed into your private folder:
+`dotnet run --project src/M2W.Cli -- generate <private folder> --seed <private seed>`. Then each evening:
+`dotnet run --project src/M2W.Cli -- run-all <private folder> --out <private output folder>`. Never put these in the
+repository, and never write the seed, the folder or any case detail anywhere an agent can read it (repo, PROGRESS,
+prompts). Keep the output folder private too: `result.json` contains the expected answers. Give agents totals only.
+Once case details have been shared, regenerate the set with a new seed.
 
 ## When to step in
 

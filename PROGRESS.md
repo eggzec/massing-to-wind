@@ -39,6 +39,30 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 
 ## Log (newest first)
 
+### 2026-11-22 · owner · R1 written into AGREEMENT.md; lock moved; branches for the M4 gate work
+- R1 action 1 done. AGREEMENT.md has a new paragraph under the tolerance table: *"Roof steps below `minEdge`: roof
+  regions that touch in plan (share an edge or a corner) and whose heights differ by less than `minEdge` are raised
+  to the highest of them, repeated until no such step remains. Expected answers include this."*
+  - Additive, so `schemaVersion` stays 0.1; recorded as D-037.
+  - `lock-v0.1` moved to this commit (was `6eac5c9`). Only AGREEMENT.md changed among the locked paths.
+- OWNER_GUIDE.md: the hidden-set seed and folder names are removed. The guide now says to keep the seed, folder,
+  output and case details where no agent can read them. `cases/README.md` still names the old seed; the generator
+  removes it when it regenerates `cases/` (locked path, approved as part of R1).
+- Housekeeping: the `m2w-gen` worktree had lost its `.git` link (folder empty); it was pruned and re-created.
+- Branches, all from `main` at this commit:
+  - **generator:** `gen/m4-r1` in `m2w-gen`, for R1 actions 2 (expected answers after the flush, `roofStep` fault,
+    regenerate `cases/`, drop the seed from `cases/README.md`). Regenerating `cases/` makes `locks` FAIL on that
+    branch; this is expected and approved, and the owner moves the tag at merge.
+  - **checker:** `check/m4-qs1` in `m2w-check`, for the Q-S1 fix and its test. Changing `src/M2W.Checker/` makes
+    `locks` FAIL on that branch; same rule.
+  - **solver:** `solve/m5` in `m2w-solve`, for M5 problems 1–3 (2026-11-21 benchmark entry). No locked path
+    involved.
+- validate (`scripts/validate.ps1`, after the commit and the tag move): build ✅ · tests 2465/2465 (Geometry 88,
+  Cli 31, Generator 2198, Checker 86, Repair 62) · cases 291/291 · locks OK · **VALIDATE: GREEN**.
+- Next: generator and checker work in parallel; the owner merges the generator first, then the checker, re-tags,
+  runs a new private hidden set and holds the M4 gate.
+- Blockers: none.
+
 ### 2026-11-21 · owner · Private benchmark run on geometry not made by the generator; 3 problems for M5
 - The owner keeps a private benchmark set outside the repo: published wind-engineering benchmark buildings and a
   real urban district model. Like the hidden set, agents get totals only: no names, sources, geometry or margins.

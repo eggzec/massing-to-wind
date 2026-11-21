@@ -1,6 +1,6 @@
 # Massing-to-Wind — Interface Agreement v0.1
 
-Owner: Saif ur Rehman · As of 2026-11-18 · LOCKED: changes need owner approval and a new `schemaVersion`.
+Owner: Saif ur Rehman · As of 2026-11-22 · LOCKED: changes need owner approval and a new `schemaVersion`.
 
 ## Purpose and roles
 
@@ -32,6 +32,8 @@ All geometry is in metres with Z up, the ground at Z = 0 and outward-facing norm
 | `weld` | Vertices closer than this are treated as one | 0.001 m |
 | `minAngleDeg` | Faces with a smaller angle count as slivers | 5° |
 | `groundSnap` | Blocks within this distance of Z = 0 are snapped to the ground | 0.5 m |
+
+**Roof steps below `minEdge`:** roof regions that touch in plan (share an edge or a corner) and whose heights differ by less than `minEdge` are raised to the highest of them, repeated until no such step remains. Expected answers include this.
 
 ## Geometry files (OBJ)
 

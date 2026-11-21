@@ -13,6 +13,20 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-037 · 2026-11-22 · owner (M4 gate) · Roof steps below `minEdge` are flushed to the higher roof, and expected answers include it
+- Context: neighbouring roofs whose heights differ by less than `minEdge` leave a wall step with edges shorter than
+  `minEdge`. The expected answers kept the step, so no valid output could match them exactly. The solver already
+  raises such steps (D-030, D-036), and the volume difference ate up to 94 % of the tolerance on an unseen case.
+- Choice: AGREEMENT.md now says that touching roof regions (sharing an edge or a corner) whose heights differ by less
+  than `minEdge` are raised to the highest of them, until no such step remains. The generator computes expected
+  `volume_m3` and `maxHeight_m` after this rule and adds a `roofStep` fault. Additive meaning, no format change:
+  `schemaVersion` stays 0.1. `lock-v0.1` moved to the commit that adds the text.
+- Alternatives: never generate near-equal neighbouring heights (hides a fault real design tools produce); lower to
+  the lower roof (changes the graded maximum height); area-weighted height (changes every roof).
+- Why: it is the only reading consistent with "edges shorter than `minEdge` are collapsed" that keeps the true
+  maximum height, and it bounds the volume change by step × raised roof area.
+- Revisit if: wind modellers need the lower roof kept (e.g. the step matters for a specific study).
+
 ## D-036 · 2026-11-21 · solver (M4) · Final phase: bake the height field into level outlines, then snap only those
 - Context: the randomised properties showed that snapping the raw plan (solid level boundaries plus fill polygons
   for gap bridges, thin regions and jogs) at `minEdge` is fragile: bending a fill's edge onto a point up to
