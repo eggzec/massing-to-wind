@@ -11,12 +11,15 @@ public class PlanTests
     public void Plan_has_the_milestone_counts()
     {
         var plan = CasePlan.Make(1);
-        Assert.Equal(10 + 12 * 20 + 40, plan.Count);
+        Assert.Equal(13, ExpectedSpec.KnownFaults.Count);
+        Assert.Equal("roofStep", ExpectedSpec.KnownFaults[^1]);
+        Assert.Equal(10 + 13 * 20 + 40, plan.Count);
         Assert.Equal(10, plan.Count(p => p.Recipe.Kind == Recipe.Clean && p.Recipe.Faults.Count == 0));
         foreach (var f in ExpectedSpec.KnownFaults)
         {
             Assert.Equal(20, plan.Count(p => p.Recipe.Kind == Recipe.SingleFault && p.Recipe.Faults.SequenceEqual(new[] { f })));
             Assert.True(plan.Count(p => p.Recipe.Has(f)) >= 25, $"{f} appears in too few cases");
+            Assert.True(plan.Count(p => p.Recipe.Kind == Recipe.Combined && p.Recipe.Has(f)) >= 3, $"{f} is in too few combined cases");
         }
         var combined = plan.Where(p => p.Recipe.Kind == Recipe.Combined).ToList();
         Assert.Equal(40, combined.Count);
@@ -39,7 +42,7 @@ public class PlanTests
     public void A_different_seed_gives_a_different_order_and_different_seeds()
     {
         var a = CasePlan.Make(1);
-        var b = CasePlan.Make(90001);
+        var b = CasePlan.Make(2);
         Assert.NotEqual(a.Select(p => string.Join(",", p.Recipe.Faults)), b.Select(p => string.Join(",", p.Recipe.Faults)));
         Assert.Empty(a.Select(p => p.Seed).Intersect(b.Select(p => p.Seed)));
         Assert.Equal(a.Select(p => p.CaseId), CasePlan.Make(1).Select(p => p.CaseId));
@@ -89,16 +92,32 @@ public class GroundTruthTests
     {
         var c = Cases.Seed1[index];
         var e = c.Expected.Expected;
-        var hf = HeightField.Build(c.ExpectedBlocks);
+        var design = HeightField.Build(c.ExpectedBlocks);
+        var hf = c.ExpectedField;
         Assert.Equal(hf.ComponentCount, e.ShellCount);
+        Assert.Equal(design.ComponentCount, hf.ComponentCount);
         Assert.Equal(hf.TotalVolume(), e.Shells.Sum(s => s.Volume_m3), 4);
         Assert.Equal(c.ExpectedBlocks.Max(b => b.Height), e.Shells.Max(s => s.MaxHeight_m), 9);
+
+        // The roof-step rule only raises roofs, never changes a footprint, and keeps every shell's maximum height.
+        Assert.Equal(design.Xs, hf.Xs);
+        Assert.Equal(design.Ys, hf.Ys);
+        for (var i = 0; i < hf.Nx; i++)
+            for (var j = 0; j < hf.Ny; j++)
+            {
+                Assert.Equal(design.Top[i, j] > 0, hf.Top[i, j] > 0);
+                Assert.True(hf.Top[i, j] >= design.Top[i, j], $"{c.CaseId}: roof lowered at cell {i},{j}");
+            }
+        Assert.Equal(design.Shells().Select(s => s.MaxHeight), hf.Shells().Select(s => s.MaxHeight));
+        Assert.Equal(e.Shells.Select(s => s.MaxHeight_m).OrderBy(x => x), hf.Shells().Select(s => Math.Round(s.MaxHeight, 6)).OrderBy(x => x));
+        Assert.Equal(e.Shells.Select(s => s.Volume_m3).OrderBy(x => x), hf.Shells().Select(s => Math.Round(s.Volume, 6)).OrderBy(x => x));
 
         // Shells are listed largest first.
         Assert.Equal(e.Shells.OrderByDescending(s => s.Volume_m3).Select(s => s.Volume_m3), e.Shells.Select(s => s.Volume_m3));
 
         // A merge is expected exactly where the design put blocks together (overlap, touching, closed gap).
-        var merged = c.Groups.Where(g => g.Relation is Relation.Overlap or Relation.Touching or Relation.GapBelow)
+        var merged = c.Groups.Where(g => g.Relation is Relation.Overlap or Relation.Touching or Relation.GapBelow
+                || (g.Relation == Relation.RoofStep && g.Expected.Count > 1))
             .Select(g => string.Join(",", g.Expected.Select(b => b.Name).OrderBy(n => n, StringComparer.Ordinal))).OrderBy(x => x, StringComparer.Ordinal);
         Assert.Equal(merged, e.MustMerge.Select(m => string.Join(",", m)).OrderBy(x => x, StringComparer.Ordinal));
         foreach (var g in c.Groups.Where(g => g.Relation == Relation.GapAbove))
@@ -316,11 +335,15 @@ public class FaultPresenceTests
                 Assert.All(welded, o => Assert.Equal(0, Topo.EdgeStats(o).Free));
             if (!c.Recipe.Has("flippedFaces") && !c.Recipe.Has("duplicateVertices") && !c.Recipe.Has("openSurface"))
                 Assert.All(welded, o => Assert.Equal(0, Topo.EdgeStats(o).Misoriented));
-            if (!c.Recipe.Has("shortEdge") && !c.Recipe.Has("sliver"))
+            // A roof deck lower than minEdge (roofStep "tier") has short wall edges by design: that step is the fault.
+            if (!c.Recipe.Has("shortEdge") && !c.Recipe.Has("sliver") && !HasLowDeck(c))
                 Assert.All(c.Input.Objects, o => Assert.True(Topo.MinEdge(c.Input.Vertices, o.Faces) >= c.Case.Tolerances.MinEdge, c.CaseId));
             if (!c.Recipe.Has("duplicateVertices")) Assert.False(HasNearDuplicates(c), c.CaseId);
         }
     }
+
+    private static bool HasLowDeck(BuiltCase c) => c.Groups.Any(g =>
+        g.Relation == Relation.RoofStep && g.Variant.StartsWith("tier", StringComparison.Ordinal) && g.Step < c.Case.Tolerances.MinEdge);
 
     private static bool HasNearDuplicates(BuiltCase c)
     {
@@ -395,15 +418,15 @@ public class FileTests
         {
             var n = new CaseGenerator().Generate(new M2W.Geometry.Stages.GenerateRequest { CasesDir = a, Seed = 1 });
             new CaseGenerator().Generate(new M2W.Geometry.Stages.GenerateRequest { CasesDir = b, Seed = 1 });
-            Assert.Equal(290, n);
+            Assert.Equal(310, n);
             var sa = Snapshot(a);
             var sb = Snapshot(b);
             Assert.Equal(sa.Keys.OrderBy(k => k), sb.Keys.OrderBy(k => k));
             foreach (var k in sa.Keys) Assert.True(sa[k].AsSpan().SequenceEqual(sb[k]), $"{k} differs");
-            Assert.Equal(290 * 3 + 1, sa.Count);
+            Assert.Equal(310 * 3 + 1, sa.Count);
 
             var index = CaseIndex.Load(Path.Combine(a, "index.json"));
-            Assert.Equal(290, index.Cases.Count);
+            Assert.Equal(310, index.Cases.Count);
             foreach (var e in index.Cases)
             {
                 var dir = Path.Combine(a, e.CaseId);

@@ -3,8 +3,8 @@
   "caseId": "case_0326",
   "units": "m",
   "origin": [
-    768136.768,
-    4100685.455,
+    0,
+    0,
     0
   ],
   "tolerances": {
@@ -13,7 +13,7 @@
     "minEdge": 0.25,
     "weld": 0.001,
     "minAngleDeg": 5,
-    "groundSnap": 0.5
+    "groundSnap": 1
   },
   "files": {
     "input": "input.obj"

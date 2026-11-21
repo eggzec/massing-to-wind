@@ -13,6 +13,36 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-038 · 2026-11-22 · generator (M4 gate, R1) · How expected answers apply the roof-step flush; the `roofStep` fault
+- Context: D-037 adds the rule "touching roof regions differing by less than `minEdge` are raised to the highest,
+  repeated" and says expected answers include it. The text leaves three details open: what a region is, the order
+  of raising when steps chain, and steps that sit right at `minEdge`.
+- Choice (flush): applied last, to the corrected height field (after ground snap, gap fill D-014 and every other
+  correction). A region is a maximal edge-connected set of roofed cells of equal height; two regions touch if any of
+  their cells share an edge or a corner. Each round, every region is raised to the highest touching region that is
+  higher by more than 0 and less than the case's `minEdge`; regions are rebuilt and this repeats until nothing
+  changes. Volumes and heights are then computed from that field (`BuiltCase.ExpectedField`). Footprints, shells,
+  genus, anchors and the maximum height cannot change. Two redraw rules keep the answer unambiguous:
+  (1) the flush is also computed raising one region at a time, lowest first and highest first; if any of the three
+  differ (a chain such as 10 / 10.2 / 10.4 m at `minEdge` 0.25 gives 10.4 everywhere or leaves 10 / 10.4) the layout
+  is redrawn; (2) a layout with a touching step within 2.5 % of `minEdge` (before or after the flush) is redrawn, so
+  rounding never decides a side. Natural heights are sums of 0.1 m floor heights, so a step of exactly 0.4 m at
+  `minEdge` 0.4 could otherwise occur. Neither rule fired at seed 1. On the old 290-case plan (same seeds and
+  recipes) the flush changes 1 expected answer (+0.079 % volume, crossing bars) and nothing is redrawn.
+- Choice (`roofStep`): 20 single-fault cases, about 9 combined. Kinds rotate: `touching` (a second block wall to
+  wall, its ground floor sized so its roof is higher or lower by the step), `overlap` (crossing bars or corner
+  overlap, same height rule), `tier` (one block with a set-back roof deck exactly the step tall, cut back on one
+  side or all sides). No other setbacks in the group, so it has exactly two roof heights a step apart (checked).
+  Steps are 0.4×, 0.8×, 0.96× `minEdge` (raised) and 1.04×, 1.5× (kept), 4 single cases each; `minEdge` is 0.15 or
+  0.4 in about 30 % (D-010). `tier` cases are always written as polygons: a deck lower than `minEdge` would be
+  triangulated into sliver triangles, which are a different fault. Appended to `ExpectedSpec.KnownFaults` (13).
+- Alternatives: transitive closure on the initial heights only (ignores "repeated"); lowest-first or simultaneous
+  as the single definition (the agreement does not pick one, and a solver could fairly choose another); letting
+  near-threshold steps through (a solver at 0.2499 vs 0.25 would be graded on rounding).
+- Why: every expected answer is the same under every reasonable reading of the rule, and the threshold is tested
+  from both sides by deliberate cases, not by accident.
+- Revisit if: the owner fixes an order for chained steps in AGREEMENT.md (then chains can be generated on purpose).
+
 ## D-037 · 2026-11-22 · owner (M4 gate) · Roof steps below `minEdge` are flushed to the higher roof, and expected answers include it
 - Context: neighbouring roofs whose heights differ by less than `minEdge` leave a wall step with edges shorter than
   `minEdge`. The expected answers kept the step, so no valid output could match them exactly. The solver already

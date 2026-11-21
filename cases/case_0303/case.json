@@ -3,14 +3,14 @@
   "caseId": "case_0303",
   "units": "m",
   "origin": [
-    238574.04,
-    4014148.253,
-    88.54
+    0,
+    0,
+    0
   ],
   "tolerances": {
     "cellSize": 1,
     "minGap": 1,
-    "minEdge": 0.25,
+    "minEdge": 0.4,
     "weld": 0.001,
     "minAngleDeg": 5,
     "groundSnap": 0.5

@@ -4,6 +4,12 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
+### Q-G1 · 2026-11-22 · generator · `roofStep` is not in the AGREEMENT.md fault list
+- `gen/m4-r1` adds the fault `roofStep` (R1 action 2): it is in `ExpectedSpec.KnownFaults`, in `faultsInjected` of
+  29 cases and in `out/summary.json`. The list "Faults to cover in v0.1" in AGREEMENT.md (owner-only) still has 12.
+- Suggested text: append `` `roofStep` `` to that list. Nothing else in the agreement needs to change; the rule
+  itself is already there (D-037). Generator work does not wait on this.
+
 ### Q-S1 · 2026-11-19 · solver · Checker misses an anchor that lies on an edge shared by two bottom triangles
 - **What happens:** `case_0284` (farCoordinates only). The solver writes the input box unchanged except for the origin
   shift: footprint 67.4 × 14.9 = 1004.26 m², volume 14,561.77 m³, every topology check passes. `volume_m3`,
@@ -38,6 +44,46 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-22 · generator · R1: expected answers include the roof-step flush; new fault `roofStep` (`gen/m4-r1`)
+- **Flush in every expected answer** (D-038), from the AGREEMENT text only (no solver code read). Applied last, to
+  the corrected height field: regions = edge-connected cells of equal height; touching = sharing an edge or a
+  corner; raise to the highest touching roof higher by more than 0 and less than the case's `minEdge`; repeat.
+  Volumes and heights come from the flushed field. Layouts are redrawn if the result depends on the raising order
+  or a touching step lies within 2.5 % of `minEdge` (neither happened at seed 1).
+- **Effect on existing cases:** the old 290-case plan (same seeds and recipes), rebuilt with this code and compared
+  byte for byte with the old `cases/`: **1 of 290 expected answers changed** (old `case_0137`, overlap, crossing bars;
+  now `case_0141`), **largest volume change +0.079 %**. 289 identical, none redrawn, no input changed, no
+  `maxHeight_m` changed. (Case IDs and combined recipes are reshuffled because the plan now has 13 faults, so the
+  comparison was made on the old plan, not by ID.)
+- **New fault `roofStep`:** touching blocks, overlapping blocks (crossing bars, corner overlap) or a block with a
+  set-back roof deck as tall as the step. 20 single-fault cases: steps 0.4×, 0.8×, 0.96× `minEdge` (raised, 4 each)
+  and 1.04×, 1.5× (kept, 4 each); 5 of them at `minEdge` 0.15 or 0.4. 9 combined cases (4 below the threshold).
+  In the new set the flush raises roofs in 17 cases (16 `roofStep`, 1 natural overlap); the largest change is
+  +1.313 %, so a solver that keeps such a step fails the volume check. Appended to `ExpectedSpec.KnownFaults`
+  (13 names, comment updated; nothing else changed in M2W.Geometry). AGREEMENT fault list: Q-G1 above.
+- **Cases per fault** (single / combined / total; clean 10; 310 cases, `case_0101`–`case_0410`): overlap 20/9/29,
+  stackedFloors 20/9/29, touchingWalls 20/9/29, smallGap 20/9/29, sliver 20/9/29, shortEdge 20/9/29,
+  duplicateVertices 20/10/30, openSurface 20/9/29, flippedFaces 20/9/29, floatingBlock 20/9/29, sunkBlock 20/10/30,
+  farCoordinates 20/9/29, roofStep 20/9/29. (`out/summary.json` adds `case_0007` to three of these.)
+- **Tests:** new `RoofStepTests.cs`:
+  - the self-check: in every case's expected height field, no two roofed cells sharing an edge or corner differ by
+    more than 0 and less than `minEdge` (written from the rule, not with the generator's helpers);
+  - coverage of both sides of the threshold;
+  - exact raised volume (step × lower-roof area) below the threshold, unchanged above;
+  - hand-made flush cases (corner contact, repetition, an order-dependent chain).
+  - Existing tests updated for 13 faults and 310 cases; the expected-answer test now also checks that the flush
+    only raises roofs and keeps footprints and maximum heights.
+  - The "no short edges by accident" check exempts only a `tier` deck lower than `minEdge` (that step is the
+    injected fault).
+  - The plan test no longer names the retired hidden seed (uses seed 2).
+- **Cases regenerated** with seed 1; `_example/case_0007` unchanged; `cases/README.md` no longer names a seed
+  ("Hidden cases use a private seed held by the owner.") and describes the flush and `roofStep`.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2903/2903 (Geometry 88, Cli 31, Generator 2636, Checker 86,
+  Repair 62) · cases **311/311** (roofStep 29/29; worst volume tolerance use 13.5 %, roofStep 0.0 %) · locks
+  **FAIL, approved for R1**: only `cases/` paths (README and regenerated cases) · VALIDATE: RED for locks only.
+- Next: owner merges `gen/m4-r1` and re-tags; Q-G1 (fault list). The checker branch should re-run on these cases.
+- Blockers: none.
 
 ### 2026-11-22 · owner · R1 written into AGREEMENT.md; lock moved; branches for the M4 gate work
 - R1 action 1 done. AGREEMENT.md has a new paragraph under the tolerance table: *"Roof steps below `minEdge`: roof

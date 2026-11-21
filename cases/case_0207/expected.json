@@ -1,50 +1,63 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0207",
-  "seed": 88848606,
+  "seed": 1526107719,
   "faultsInjected": [
-    "sunkBlock"
+    "stackedFloors"
   ],
   "expected": {
-    "shellCount": 3,
+    "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 41238.81,
-        "footprintArea_m2": 1295.82,
-        "maxHeight_m": 74,
-        "genus": 0,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          -67.918,
-          -86.161
-        ]
-      },
-      {
-        "volume_m3": 11346.45,
-        "footprintArea_m2": 846.75,
-        "maxHeight_m": 13.4,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          -46.598,
-          -64.842
-        ]
-      },
-      {
-        "volume_m3": 8892.122,
-        "footprintArea_m2": 369.9,
-        "maxHeight_m": 25.9,
+        "volume_m3": 59244.141,
+        "footprintArea_m2": 2141.73,
+        "maxHeight_m": 82.5,
         "genus": 0,
         "blocks": [
           "B03"
         ],
         "anchor_m": [
-          17.253,
-          -46.457
+          68.15,
+          66.7
+        ]
+      },
+      {
+        "volume_m3": 43478.244,
+        "footprintArea_m2": 1759.35,
+        "maxHeight_m": 49.6,
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          24.85,
+          121.85
+        ]
+      },
+      {
+        "volume_m3": 21016.369,
+        "footprintArea_m2": 349.69,
+        "maxHeight_m": 60.1,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          116.05,
+          76.05
+        ]
+      },
+      {
+        "volume_m3": 13246.74,
+        "footprintArea_m2": 716.04,
+        "maxHeight_m": 18.5,
+        "genus": 0,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          13.95,
+          52.6
         ]
       }
     ],
@@ -52,7 +65,11 @@
     "mustStaySeparate": [
       [
         "B01",
-        "B02"
+        "B03"
+      ],
+      [
+        "B03",
+        "B04"
       ]
     ]
   },

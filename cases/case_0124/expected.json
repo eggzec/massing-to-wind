@@ -1,25 +1,25 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0124",
-  "seed": 1269039022,
+  "seed": 204196030,
   "faultsInjected": [
-    "touchingWalls"
+    "roofStep"
   ],
   "expected": {
     "shellCount": 1,
     "shells": [
       {
-        "volume_m3": 41276,
-        "footprintArea_m2": 927.44,
-        "maxHeight_m": 60,
+        "volume_m3": 12184.234,
+        "footprintArea_m2": 909.86,
+        "maxHeight_m": 13.56,
         "genus": 0,
         "blocks": [
           "B01",
           "B02"
         ],
         "anchor_m": [
-          -0.9,
-          40.5
+          5.02,
+          -62.695
         ]
       }
     ],

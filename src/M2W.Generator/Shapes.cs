@@ -37,6 +37,25 @@ public static class Shapes
         return list;
     }
 
+    /// <summary>Floors that reach exactly <paramref name="target"/> metres: typical floors of a usual height and a
+    /// ground floor of whatever height is left over (3.4–5.4 m). Null if no floor count gives that.</summary>
+    public static List<double>? FloorsToHeight(Rng r, double target)
+    {
+        var typical = r.Pick(new[] { 3.0, 3.1, 3.2, 3.3, 3.5 });
+        var options = new List<int>();
+        for (var n = 2; n <= 40; n++)
+        {
+            var ground = Math.Round(target - (n - 1) * typical, 6);
+            if (ground >= 3.4 && ground <= 5.4) options.Add(n);
+        }
+        if (options.Count == 0) return null;
+        var count = r.Pick(options);
+        var list = new List<double> { Math.Round(target - (count - 1) * typical, 6) };
+        for (var i = 1; i < count; i++) list.Add(typical);
+        var b = new Block("bar", new[] { new Rect(0, 0, 1, 1) }, list);
+        return Math.Abs(b.Height - target) < 1e-9 ? list : null;
+    }
+
     public static Block Bar(Rng r, DesignRules d)
     {
         var len = r.Step(24, 72, 0.1);

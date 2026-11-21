@@ -1,39 +1,51 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0381",
-  "seed": 1686692544,
+  "seed": 1129924651,
   "faultsInjected": [
-    "overlap",
-    "duplicateVertices"
+    "overlap"
   ],
   "expected": {
-    "shellCount": 2,
+    "shellCount": 3,
     "shells": [
       {
-        "volume_m3": 22986.126,
-        "footprintArea_m2": 989.68,
-        "maxHeight_m": 25.2,
-        "genus": 1,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          -9.6,
-          50.55
-        ]
-      },
-      {
-        "volume_m3": 16322.7,
-        "footprintArea_m2": 693.5,
-        "maxHeight_m": 24,
+        "volume_m3": 28123.676,
+        "footprintArea_m2": 1138.76,
+        "maxHeight_m": 28,
         "genus": 0,
         "blocks": [
           "B02",
           "B03"
         ],
         "anchor_m": [
-          41,
-          39.55
+          70.461,
+          45.472
+        ]
+      },
+      {
+        "volume_m3": 16229.59,
+        "footprintArea_m2": 1341.66,
+        "maxHeight_m": 14.5,
+        "genus": 1,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          14.894,
+          96.03
+        ]
+      },
+      {
+        "volume_m3": 15575.49,
+        "footprintArea_m2": 494.46,
+        "maxHeight_m": 31.5,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          116.972,
+          81.418
         ]
       }
     ],
@@ -51,6 +63,14 @@
       [
         "B01",
         "B03"
+      ],
+      [
+        "B02",
+        "B04"
+      ],
+      [
+        "B03",
+        "B04"
       ]
     ]
   },

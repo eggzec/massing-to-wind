@@ -3,9 +3,9 @@
   "caseId": "case_0357",
   "units": "m",
   "origin": [
-    0,
-    0,
-    0
+    303484.447,
+    5755807.364,
+    75.93
   ],
   "tolerances": {
     "cellSize": 1,
@@ -13,7 +13,7 @@
     "minEdge": 0.25,
     "weld": 0.001,
     "minAngleDeg": 5,
-    "groundSnap": 0.5
+    "groundSnap": 1
   },
   "files": {
     "input": "input.obj"

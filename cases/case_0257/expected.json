@@ -1,97 +1,45 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0257",
-  "seed": 1494724202,
+  "seed": 1798681224,
   "faultsInjected": [
-    "touchingWalls",
-    "smallGap",
-    "shortEdge",
-    "floatingBlock"
+    "smallGap"
   ],
   "expected": {
-    "shellCount": 4,
+    "shellCount": 2,
     "shells": [
       {
-        "volume_m3": 43593.324,
-        "footprintArea_m2": 1291.56,
-        "maxHeight_m": 37.2,
-        "genus": 0,
-        "blocks": [
-          "B04",
-          "B05"
-        ],
-        "anchor_m": [
-          83.513,
-          16.743
-        ]
-      },
-      {
-        "volume_m3": 20635.68,
-        "footprintArea_m2": 794.4,
-        "maxHeight_m": 28.1,
+        "volume_m3": 25928.094,
+        "footprintArea_m2": 1004.19,
+        "maxHeight_m": 26.6,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          58.547,
-          -16.411
+          49.15,
+          64.05
         ]
       },
       {
-        "volume_m3": 18117.438,
-        "footprintArea_m2": 887.75,
-        "maxHeight_m": 21,
+        "volume_m3": 9699.69,
+        "footprintArea_m2": 335.92,
+        "maxHeight_m": 36.3,
         "genus": 0,
         "blocks": [
-          "B06"
+          "B02"
         ],
         "anchor_m": [
-          116.361,
-          -31.795
-        ]
-      },
-      {
-        "volume_m3": 14323.5,
-        "footprintArea_m2": 759.175,
-        "maxHeight_m": 19.5,
-        "genus": 0,
-        "blocks": [
-          "B02",
-          "B03"
-        ],
-        "anchor_m": [
-          152.189,
-          51.077
+          41.75,
+          8.5
         ]
       }
     ],
-    "mustMerge": [
-      [
-        "B02",
-        "B03"
-      ],
-      [
-        "B04",
-        "B05"
-      ]
-    ],
+    "mustMerge": [],
     "mustStaySeparate": [
       [
         "B01",
-        "B04"
-      ],
-      [
-        "B01",
-        "B05"
-      ],
-      [
-        "B04",
-        "B06"
-      ],
-      [
-        "B05",
-        "B06"
+        "B02"
       ]
     ]
   },
@@ -99,8 +47,8 @@
     "watertight": true,
     "outwardNormals": true,
     "noSelfIntersections": true,
-    "minGap_m": 1,
-    "minEdge_m": 0.15
+    "minGap_m": 1.5,
+    "minEdge_m": 0.25
   },
   "tolerances": {
     "volumeRel": 0.01,

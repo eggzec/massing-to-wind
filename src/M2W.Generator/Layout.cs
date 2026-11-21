@@ -12,6 +12,10 @@ public enum Relation
 
     /// <summary>Gap wider than minGap: left open, the blocks stay separate.</summary>
     GapAbove,
+
+    /// <summary>Touching or overlapping blocks, or a block and its own set-back tier, whose roofs differ by a small
+    /// step (<see cref="Group.Step"/>). Blocks merge; below minEdge the lower roof is raised to the higher one.</summary>
+    RoofStep,
 }
 
 /// <summary>
@@ -31,6 +35,12 @@ public sealed class Group
     public List<Block> Clean { get; private set; }
     public List<Block> Expected { get; private set; }
     public double Gap { get; init; }
+
+    /// <summary>roofStep: the designed height difference between the two touching roofs (always &gt; 0).</summary>
+    public double Step { get; init; }
+
+    /// <summary>roofStep: the lower and the higher of the two roofs.</summary>
+    public (double Low, double High) Roofs { get; init; }
     public string Variant { get; init; } = "";
 
     public Rect Bounds => Rect.Bounds(Expected.SelectMany(b => b.Rects));
@@ -246,5 +256,128 @@ public static class Layouts
                 return g;
             }
         }
+    }
+
+    private static Block NoSetbacks(Block b) => b.WithTiers(new[] { new Tier(b.FloorCount, Rect.Everything) });
+
+    public static readonly IReadOnlyList<string> RoofStepKinds = new[] { "touching", "overlap", "tier" };
+
+    /// <summary>
+    /// roofStep (D-038): two roofs that touch in plan and differ by exactly <paramref name="step"/>.
+    /// "touching": a second block built wall to wall with the first, its floors chosen so its roof is higher or
+    /// lower by the step (a different ground-floor height). "overlap": crossing bars or a corner overlap with the same
+    /// kind of height difference. "tier": one block whose top tier is a set-back roof deck only <paramref name="step"/>
+    /// tall (a plant deck or upstand), cut back on one side or on every side. No other setbacks, so the group has
+    /// exactly two roof heights.
+    /// </summary>
+    public static Group RoofStep(Rng r, DesignRules d, double step, string kind)
+    {
+        var mf = d.MinFeature;
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            Group? g = null;
+            var higher = r.Chance(0.5);
+            switch (kind)
+            {
+                case "touching":
+                {
+                    var a = FacingBlock(r, d, allowSetbacks: false);
+                    var (f0, f1) = r.Pick(EastFaces(a));
+                    var depth = r.Step(10, 24, 0.1);
+                    var width = r.Step(12, 36, 0.1);
+                    var v0 = r.Step(f0 - depth + mf, f1 - mf, 0.1);
+                    v0 = Snap(v0, mf, f0, Math.Round(f1 - depth, 6));
+                    if (Math.Abs(v0 + depth - f0) < mf || Math.Abs(v0 + depth - f1) < mf) v0 = f0;
+                    var floors = Shapes.FloorsToHeight(r, Math.Round(a.Height + (higher ? step : -step), 6));
+                    if (floors is null) continue;
+                    var u0 = a.Bounds.U1;
+                    var b = new Block("bar", new[] { new Rect(u0, v0, Math.Round(u0 + width, 6), Math.Round(v0 + depth, 6)) }, floors);
+                    g = new Group(Relation.RoofStep, r.Chance(0.5) ? new[] { a, b } : new[] { b, a }) { Variant = kind };
+                    break;
+                }
+                case "overlap":
+                {
+                    Block a, b;
+                    var cross = r.Chance(0.5);
+                    if (cross)
+                    {
+                        var len = r.Step(30, 70, 0.1);
+                        var dep = r.Step(10, 16, 0.1);
+                        a = new Block("bar", new[] { new Rect(0, 0, len, dep) }, Shapes.Floors(r, r.IntIn(3, 9)));
+                        var bw = r.Step(10, 16, 0.1);
+                        var bu0 = r.Step(mf, len - bw - mf, 0.1);
+                        var below = r.Chance(0.6) ? r.Step(mf, 20, 0.1) : 0;
+                        var above = r.Step(mf, 24, 0.1);
+                        var floors = Shapes.FloorsToHeight(r, Math.Round(a.Height + (higher ? step : -step), 6));
+                        if (floors is null) continue;
+                        b = new Block("bar", new[] { new Rect(bu0, Math.Round(-below, 6), Math.Round(bu0 + bw, 6), Math.Round(dep + above, 6)) }, floors);
+                    }
+                    else
+                    {
+                        a = NoSetbacks(Shapes.Bar(r, d));
+                        var ab = a.Bounds;
+                        var bw = r.Step(12, 30, 0.1);
+                        var bd = r.Step(10, 24, 0.1);
+                        var ou = r.Step(mf, Math.Min(bw, ab.Width) - mf, 0.1);
+                        var ov = r.Step(mf, Math.Min(bd, ab.Depth) - mf, 0.1);
+                        var bu0 = Math.Round(ab.U1 - ou, 6);
+                        var bv0 = Math.Round(ab.V1 - ov, 6);
+                        var floors = Shapes.FloorsToHeight(r, Math.Round(a.Height + (higher ? step : -step), 6));
+                        if (floors is null) continue;
+                        b = new Block("bar", new[] { new Rect(bu0, bv0, Math.Round(bu0 + bw, 6), Math.Round(bv0 + bd, 6)) }, floors);
+                    }
+                    g = new Group(Relation.RoofStep, r.Chance(0.5) ? new[] { a, b } : new[] { b, a }) { Variant = cross ? "overlap (crossing bars)" : "overlap (corner)" };
+                    break;
+                }
+                default:
+                {
+                    var basis = NoSetbacks(Shapes.Make(r.Pick(new[] { "bar", "bar", "L", "tower" }), r, d));
+                    var floors = basis.FloorHeights.Append(step).ToList();
+                    var bounds = basis.Bounds;
+                    Rect clip;
+                    string where;
+                    if (r.Chance(0.5))
+                    {
+                        var inset = r.Step(mf, Math.Max(mf, Math.Min(8, Math.Min(bounds.Width, bounds.Depth) / 4)), 0.1);
+                        clip = new Rect(Math.Round(bounds.U0 + inset, 6), Math.Round(bounds.V0 + inset, 6),
+                            Math.Round(bounds.U1 - inset, 6), Math.Round(bounds.V1 - inset, 6));
+                        where = "every side";
+                    }
+                    else
+                    {
+                        var side = r.Int(0, 4);
+                        var extent = side % 2 == 0 ? bounds.Width : bounds.Depth;
+                        var depth = r.Step(mf, Math.Max(mf, Math.Min(8, extent / 4)), 0.1);
+                        clip = side switch
+                        {
+                            0 => Rect.Everything with { U0 = Math.Round(bounds.U0 + depth, 6) },
+                            1 => Rect.Everything with { V0 = Math.Round(bounds.V0 + depth, 6) },
+                            2 => Rect.Everything with { U1 = Math.Round(bounds.U1 - depth, 6) },
+                            _ => Rect.Everything with { V1 = Math.Round(bounds.V1 - depth, 6) },
+                        };
+                        where = new[] { "west", "south", "east", "north" }[side] + " side";
+                    }
+                    var b = new Block(basis.Kind, basis.Rects, floors,
+                        new[] { new Tier(basis.FloorCount, Rect.Everything), new Tier(basis.FloorCount + 1, clip) });
+                    g = new Group(Relation.RoofStep, new[] { b }) { Variant = $"tier ({where})" };
+                    break;
+                }
+            }
+
+            // The group must have exactly two roof heights, touching, a step apart.
+            var hf = HeightField.Build(g.Clean);
+            var heights = new SortedSet<double>();
+            for (var i = 0; i < hf.Nx; i++)
+                for (var j = 0; j < hf.Ny; j++)
+                    if (hf.Top[i, j] > 0) heights.Add(hf.Top[i, j]);
+            if (hf.ComponentCount != 1 || heights.Count != 2) continue;
+            if (!hf.TouchingSteps().SetEquals(new[] { Math.Round(step, 6) })) continue;
+            g = new Group(Relation.RoofStep, g.Clean) { Variant = g.Variant, Step = step, Roofs = (heights.Min, heights.Max) };
+            var quarter = r.Int(0, 4);
+            g.Transform(x => x.Rotate90(quarter));
+            g.Normalise();
+            return g;
+        }
+        throw new InvalidOperationException("Could not build a roofStep group.");
     }
 }

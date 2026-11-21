@@ -1,77 +1,61 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0150",
-  "seed": 1432005683,
+  "seed": 332657673,
   "faultsInjected": [
-    "sliver"
+    "roofStep"
   ],
   "expected": {
-    "shellCount": 4,
+    "shellCount": 3,
     "shells": [
       {
-        "volume_m3": 27183.618,
-        "footprintArea_m2": 1176.78,
-        "maxHeight_m": 23.1,
-        "genus": 1,
-        "blocks": [
-          "B04"
-        ],
-        "anchor_m": [
-          9.305,
-          -52.475
-        ]
-      },
-      {
-        "volume_m3": 17122.56,
-        "footprintArea_m2": 1223.04,
-        "maxHeight_m": 14,
-        "genus": 1,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          -15.143,
-          -112.133
-        ]
-      },
-      {
-        "volume_m3": 14955.192,
-        "footprintArea_m2": 593.46,
-        "maxHeight_m": 25.2,
+        "volume_m3": 20662.94,
+        "footprintArea_m2": 1036.19,
+        "maxHeight_m": 22,
         "genus": 0,
         "blocks": [
           "B02"
         ],
         "anchor_m": [
-          33.989,
-          -128.663
+          56.332,
+          -82.926
         ]
       },
       {
-        "volume_m3": 13094.2,
-        "footprintArea_m2": 1309.42,
-        "maxHeight_m": 10,
-        "genus": 1,
+        "volume_m3": 20537.55,
+        "footprintArea_m2": 691.5,
+        "maxHeight_m": 29.7,
+        "genus": 0,
         "blocks": [
-          "B03"
+          "B03",
+          "B04"
         ],
         "anchor_m": [
-          35.931,
-          -62.473
+          32.777,
+          -48.214
+        ]
+      },
+      {
+        "volume_m3": 14778.438,
+        "footprintArea_m2": 1355.82,
+        "maxHeight_m": 10.9,
+        "genus": 1,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          52.339,
+          -18.806
         ]
       }
     ],
-    "mustMerge": [],
-    "mustStaySeparate": [
-      [
-        "B01",
-        "B02"
-      ],
+    "mustMerge": [
       [
         "B03",
         "B04"
       ]
-    ]
+    ],
+    "mustStaySeparate": []
   },
   "checks": {
     "watertight": true,

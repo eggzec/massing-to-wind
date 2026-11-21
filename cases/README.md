@@ -8,19 +8,19 @@ Regenerate with `dotnet run --project src/M2W.Cli -- generate cases`; the test
   Two blocks, 18 m tall: B01 (20 × 10 m) emitted as six stacked 3 m floors, B02 (10 × 10 m) whole,
   0.3 m gap between them, map coordinates (origin 530000, 180000). Correct repair: one shell, 30.3 × 10 m,
   footprint 303 m², volume 5,454 m³. The generator never touches it.
-- `case_0101` … `case_0390` (290 cases) are generated. IDs `case_0001`–`case_0100` are kept for hand-made cases.
+- `case_0101` … `case_0410` (310 cases) are generated. IDs `case_0001`–`case_0100` are kept for hand-made cases.
   Regenerating deletes only `case_NNNN` folders that contain a `case.json`; anything else here is left alone.
 - `index.json` lists every case: seed, kind (`clean`, `single`, `combined`), faults, face style, site, blocks
   and a short note per injected fault (for people; the solver must not read it).
-- Hidden cases are kept by the owner outside this repository (`m2w generate ../hidden --seed 90001`).
+- Hidden cases use a private seed held by the owner.
 
 ## What is in the set
 
 | Kind | Count | What |
 | --- | --- | --- |
 | Clean controls | 10 | 1–4 separate blocks, triangles, local coordinates, closed outward shells, no slivers or short edges. They already meet the output rules (only the object names are `B<nn>`, not `shell_NNN`). |
-| Single fault | 12 × 20 | One fault from AGREEMENT.md each. |
-| Combined | 40 | 2–4 faults each (about 10 combined cases per fault). |
+| Single fault | 13 × 20 | One fault each: the 12 of AGREEMENT.md and `roofStep` (owner decision R1, D-037). |
+| Combined | 40 | 2–4 faults each (about 9 combined cases per fault). |
 
 The order is shuffled with the seed, so a case ID says nothing about its faults.
 
@@ -36,6 +36,11 @@ The order is shuffled with the seed, so a case ID says nothing about its faults.
    within 10 m of each other). Shells are listed largest volume first, each with `blocks` (which blocks it contains)
    and `anchor_m` (a local [x, y] point well inside its footprint, for matching by position; D-017). Footprint is
    the area of the bottom face at z = 0. Nothing is typed by hand.
+   The AGREEMENT rule for roof steps below `minEdge` is applied last, to the corrected height field: roof regions
+   (connected cells of equal height) that share an edge or a corner and differ by more than 0 and less than the case's
+   `minEdge` are raised to the higher one, repeated until none is left. Volumes are computed after it; the maximum
+   height never changes. Layouts where the result would depend on the order of raising, or with a touching step
+   within 2.5 % of `minEdge`, are redrawn (D-038).
 4. **Faults.** These are applied to the emitted geometry. See the table below and `DECISIONS.md` (D-009 to D-017).
 
 | Fault | How it is injected | Expected answer |
@@ -52,3 +57,4 @@ The order is shuffled with the seed, so a case ID says nothing about its faults.
 | `floatingBlock` | Whole block lifted by 0.1–0.9 × `groundSnap` | Moved back down (height unchanged) |
 | `sunkBlock` | Whole block sunk by 0.1–0.9 × `groundSnap` | Moved back up (height unchanged) |
 | `farCoordinates` | Map origin (e.g. 681940, 5883213), sometimes with a site elevation in z | Local coordinates |
+| `roofStep` | Two roofs touching in plan a small step apart: blocks wall to wall, overlapping blocks (crossing bars, corner overlap), or a block with a set-back roof deck as tall as the step. Steps of 0.4×, 0.8×, 0.96× (4 cases each) and 1.04×, 1.5× `minEdge` (4 each); `minEdge` 0.15 or 0.4 in about 30 % | Below `minEdge`: lower roof raised to the higher one, one shell. Above: step kept |

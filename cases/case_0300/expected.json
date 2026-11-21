@@ -1,37 +1,65 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0300",
-  "seed": 1018518240,
+  "seed": 467403686,
   "faultsInjected": [
-    "openSurface"
+    "duplicateVertices",
+    "openSurface",
+    "floatingBlock"
   ],
   "expected": {
-    "shellCount": 2,
+    "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 24346.08,
-        "footprintArea_m2": 1294.8,
-        "maxHeight_m": 59.4,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          85.48,
-          -14.448
-        ]
-      },
-      {
-        "volume_m3": 14324.32,
-        "footprintArea_m2": 628.82,
-        "maxHeight_m": 26,
+        "volume_m3": 44863.104,
+        "footprintArea_m2": 434.72,
+        "maxHeight_m": 103.2,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          54.329,
-          24.732
+          -60.945,
+          -9.3
+        ]
+      },
+      {
+        "volume_m3": 16024.192,
+        "footprintArea_m2": 740.47,
+        "maxHeight_m": 25.6,
+        "genus": 0,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          -76.255,
+          -45.555
+        ]
+      },
+      {
+        "volume_m3": 15063.36,
+        "footprintArea_m2": 791.41,
+        "maxHeight_m": 21,
+        "genus": 0,
+        "blocks": [
+          "B03"
+        ],
+        "anchor_m": [
+          -134.172,
+          27.654
+        ]
+      },
+      {
+        "volume_m3": 6924.06,
+        "footprintArea_m2": 314.73,
+        "maxHeight_m": 22,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          -97.35,
+          5.541
         ]
       }
     ],

@@ -1,24 +1,24 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0297",
-  "seed": 611252651,
+  "seed": 1263257235,
   "faultsInjected": [
-    "openSurface"
+    "sliver"
   ],
   "expected": {
     "shellCount": 1,
     "shells": [
       {
-        "volume_m3": 25412.48,
-        "footprintArea_m2": 794.14,
-        "maxHeight_m": 32,
+        "volume_m3": 30112.5,
+        "footprintArea_m2": 412.5,
+        "maxHeight_m": 73,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          22.356,
-          56.948
+          38.106,
+          -11.435
         ]
       }
     ],

@@ -6,11 +6,13 @@ namespace M2W.Geometry.Models;
 /// <summary><c>expected.json</c>: the answers. Only the checker (and the run-all summary) may read it; never the solver.</summary>
 public sealed class ExpectedSpec : IValidatable
 {
-    /// <summary>The 12 fault names of AGREEMENT.md v0.1.</summary>
+    /// <summary>The 13 fault names: the 12 of AGREEMENT.md v0.1, then <c>roofStep</c> (roof steps below and above
+    /// <c>minEdge</c>, owner decision R1, D-037).</summary>
     public static readonly IReadOnlyList<string> KnownFaults = new[]
     {
         "overlap", "stackedFloors", "touchingWalls", "smallGap", "sliver", "shortEdge",
         "duplicateVertices", "openSurface", "flippedFaces", "floatingBlock", "sunkBlock", "farCoordinates",
+        "roofStep",
     };
 
     [JsonPropertyName("schemaVersion")] public required string SchemaVersion { get; init; }

@@ -1,63 +1,63 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0171",
-  "seed": 1031797083,
+  "seed": 1156746421,
   "faultsInjected": [
-    "flippedFaces"
+    "duplicateVertices"
   ],
   "expected": {
     "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 36742.984,
-        "footprintArea_m2": 1142.34,
-        "maxHeight_m": 78.9,
-        "genus": 0,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          89.216,
-          -73.632
-        ]
-      },
-      {
-        "volume_m3": 22237.6,
-        "footprintArea_m2": 731.5,
-        "maxHeight_m": 30.4,
-        "genus": 0,
-        "blocks": [
-          "B03"
-        ],
-        "anchor_m": [
-          86.837,
-          17.392
-        ]
-      },
-      {
-        "volume_m3": 21325.815,
-        "footprintArea_m2": 677.01,
-        "maxHeight_m": 31.5,
+        "volume_m3": 65231.81,
+        "footprintArea_m2": 2091.85,
+        "maxHeight_m": 77,
         "genus": 0,
         "blocks": [
           "B02"
         ],
         "anchor_m": [
-          67.938,
-          -13.771
+          18.161,
+          49.092
         ]
       },
       {
-        "volume_m3": 20616.9,
-        "footprintArea_m2": 893.85,
-        "maxHeight_m": 25,
+        "volume_m3": 35879.45,
+        "footprintArea_m2": 372.06,
+        "maxHeight_m": 105.5,
+        "genus": 0,
+        "blocks": [
+          "B03"
+        ],
+        "anchor_m": [
+          -40.773,
+          58.631
+        ]
+      },
+      {
+        "volume_m3": 25511.232,
+        "footprintArea_m2": 924.32,
+        "maxHeight_m": 27.6,
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          -22.221,
+          38.159
+        ]
+      },
+      {
+        "volume_m3": 24676.704,
+        "footprintArea_m2": 285.61,
+        "maxHeight_m": 86.4,
         "genus": 0,
         "blocks": [
           "B04"
         ],
         "anchor_m": [
-          99.151,
-          -28.308
+          64.096,
+          45.449
         ]
       }
     ],
@@ -69,14 +69,10 @@
       ],
       [
         "B01",
-        "B04"
-      ],
-      [
-        "B02",
         "B03"
       ],
       [
-        "B03",
+        "B02",
         "B04"
       ]
     ]
