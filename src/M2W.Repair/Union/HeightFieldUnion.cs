@@ -31,17 +31,24 @@ public sealed class HeightFieldUnion
 
         /// <summary>For each solid (by input order), the shell it ended up in (-1 if none).</summary>
         public int[] SolidShell { get; init; } = Array.Empty<int>();
+
+        /// <summary>Gaps below minGap that were bridged: (blocks on one side, blocks on the other, width, fill height).</summary>
+        public List<(string a, string b, double width, double z)> ClosedGaps { get; } = new();
     }
 
     private readonly IReadOnlyList<Solid> _solids;
     private readonly double _tol;
     private readonly double _minEdge;
+    private readonly double _minGap;
 
     /// <param name="tolerance">Weld tolerance: points and heights closer than this are the same.</param>
     /// <param name="minEdge">Neighbouring roofs whose heights differ by less than this are made flush (raised to the
     /// higher one), because the step between them would be an edge shorter than minEdge.</param>
-    public HeightFieldUnion(IReadOnlyList<Solid> solids, double tolerance, double minEdge = 0)
+    /// <param name="minGap">Gaps between separate parts narrower than this are closed (see <see cref="GapCloser"/>);
+    /// 0 turns gap closing off.</param>
+    public HeightFieldUnion(IReadOnlyList<Solid> solids, double tolerance, double minEdge = 0, double minGap = 0)
     {
+        _minGap = Math.Max(minGap, 0);
         _solids = solids;
         _tol = Math.Max(tolerance, 1e-6);
         _minEdge = Math.Max(minEdge, 0);
@@ -75,7 +82,7 @@ public sealed class HeightFieldUnion
 
         // ---- 2. boundary edges per (solid, level), tagged
         var tags = new List<Tag>();
-        var plan = new Planarizer(_tol);
+        var segs = new List<(P2 a, P2 b, int tag)>();
         for (var si = 0; si < _solids.Count; si++)
         {
             var s = _solids[si];
@@ -101,7 +108,7 @@ public sealed class HeightFieldUnion
                 {
                     if (n % 2 == 0) continue;
                     var pu = s.Vertices[u]; var pv = s.Vertices[v];
-                    plan.AddSegment(new P2(pu.X, pu.Y), new P2(pv.X, pv.Y), tagId);
+                    segs.Add((new P2(pu.X, pu.Y), new P2(pv.X, pv.Y), tagId));
                     any = true;
                 }
                 if (any) tags.Add(new Tag(si, L, levels[L].z));
@@ -111,74 +118,36 @@ public sealed class HeightFieldUnion
         res.Problems.AddRange(problems);
         if (tags.Count == 0) { res.Problems.Add("no horizontal faces: nothing to build"); return res; }
 
-        var pedges = plan.Build();
-        var pts = plan.Points;
-        var dcel = Dcel.Build(pts, pedges.Select(e => (e.u, e.v)).ToList());
-        var words = (tags.Count + 63) / 64;
-
-        // ---- 3. label faces by toggling tags across edges, starting from the outside
-        var edgeBits = pedges.Select(e =>
+        // ---- 3-4. plan, labels and heights; then close gaps below minGap and build the plan again with the bridges
+        var fills = new List<GapCloser.Bridge>();
+        Plan plan;
+        for (var round = 0; ; round++)
         {
-            var b = new ulong[words];
-            foreach (var t in e.tags) b[t >> 6] ^= 1UL << (t & 63);
-            return b;
-        }).ToArray();
-        var label = new ulong[dcel.FaceCount][];
-        label[0] = new ulong[words];
-        var queue = new Queue<int>();
-        queue.Enqueue(0);
-        var inconsistent = 0;
-        while (queue.Count > 0)
-        {
-            var f = queue.Dequeue();
-            foreach (var c in FaceCycles(dcel, f))
-                foreach (var h in dcel.Cycles[c])
-                {
-                    var g = dcel.FaceOf(Dcel.Twin(h));
-                    var eb = edgeBits[h >> 1];
-                    var lg = new ulong[words];
-                    for (var w = 0; w < words; w++) lg[w] = label[f][w] ^ eb[w];
-                    if (label[g] is null) { label[g] = lg; queue.Enqueue(g); }
-                    else if (!label[g].AsSpan().SequenceEqual(lg)) inconsistent++;
-                }
-        }
-        if (inconsistent > 0)
-            res.Problems.Add($"plan labelling inconsistent on {inconsistent} edges (a level boundary is not closed)");
-
-        // ---- 4. height of each face; which solids cover it
-        var height = new double[dcel.FaceCount];
-        var covers = new List<int>[dcel.FaceCount];
-        var openSolids = new SortedSet<int>();
-        var lowest = new double[dcel.FaceCount];
-        var filledUnder = new SortedSet<int>();
-        for (var f = 0; f < dcel.FaceCount; f++)
-        {
-            covers[f] = new List<int>();
-            if (label[f] is null) { inconsistent++; continue; }
-            var curSolid = -1; var inside = false; var top = 0.0; var hasTop = false; var bottom = 0.0;
-            lowest[f] = double.PositiveInfinity;
-            void Close()
+            plan = BuildPlan(segs, tags, fills);
+            if (_minGap <= 0) break;
+            var found = GapCloser.Find(plan.Dcel, plan.Height, _minGap, _tol);
+            foreach (var gap in found.Gaps)
             {
-                if (curSolid < 0) return;
-                if (inside) openSolids.Add(curSolid);
-                if (hasTop) { covers[f].Add(curSolid); height[f] = Math.Max(height[f], top); lowest[f] = Math.Min(lowest[f], bottom); }
+                var pair = new[] { BlocksOf(plan, gap.FaceA), BlocksOf(plan, gap.FaceB) };
+                if (!gap.Bridged)
+                    res.Problems.Add($"gap of {gap.Width:0.###} m between {pair[0]} and {pair[1]} at {gap.Z:0.###} m could not be bridged");
+                else
+                    res.ClosedGaps.Add((pair[0], pair[1], gap.Width, gap.Z));
             }
-            for (var t = 0; t < tags.Count; t++)
+            if (found.Bridges.Count == 0) break;
+            if (round == MaxGapRounds)
             {
-                if ((label[f][t >> 6] & (1UL << (t & 63))) == 0) continue;
-                var tg = tags[t];
-                if (tg.Solid != curSolid) { Close(); curSolid = tg.Solid; inside = false; hasTop = false; bottom = tg.Z; }
-                inside = !inside;
-                if (!inside) { top = tg.Z; hasTop = true; }
+                res.Problems.Add($"gaps below minGap remain after {MaxGapRounds} rounds of gap closing");
+                break;
             }
-            Close();
-            if (height[f] > 0 && lowest[f] > _tol)
-                foreach (var s in covers[f]) filledUnder.Add(s);
-            if (height[f] < 0) height[f] = 0;
+            fills.AddRange(found.Bridges);
         }
-        foreach (var b in filledUnder.Select(s => _solids[s].Block).Distinct())
+        var (pedges, pts, dcel, height, covers) = (plan.Edges, plan.Points, plan.Dcel, plan.Height, plan.Covers);
+        if (plan.Inconsistent > 0)
+            res.Problems.Add($"plan labelling inconsistent on {plan.Inconsistent} edges (a level boundary is not closed)");
+        foreach (var b in plan.FilledUnder.Select(s => _solids[s].Block).Distinct())
             res.Problems.Add($"block {b} has no support below part of it (it floats beyond groundSnap); filled down to the ground");
-        foreach (var s in openSolids)
+        foreach (var s in plan.OpenSolids)
             res.Problems.Add($"object {_solids[s].Name}: horizontal faces do not close (open above or below)");
 
         // ---- 4b. steps lower than minEdge between neighbouring roofs: raise the lower roof to the higher one
@@ -270,6 +239,123 @@ public sealed class HeightFieldUnion
             res.Shells.Add(sh);
         }
         return res;
+    }
+
+    private const int MaxGapRounds = 4;
+
+    private sealed class Plan
+    {
+        public required List<(int u, int v, int[] tags)> Edges;
+        public required List<P2> Points;
+        public required Dcel Dcel;
+        public required double[] Height;
+        public required List<int>[] Covers;
+        public int Inconsistent;
+        public SortedSet<int> OpenSolids = new();
+        public SortedSet<int> FilledUnder = new();
+    }
+
+    private string BlocksOf(Plan p, int face)
+    {
+        // The blocks of the slice component containing this face: blocks covering any face joined to it at its height.
+        var h = p.Height[face];
+        var seen = new HashSet<int> { face };
+        var queue = new Queue<int>();
+        queue.Enqueue(face);
+        var blocks = new SortedSet<string>(StringComparer.Ordinal);
+        while (queue.Count > 0)
+        {
+            var f = queue.Dequeue();
+            foreach (var s in p.Covers[f]) blocks.Add(_solids[s].Block);
+            foreach (var c in FaceCycles(p.Dcel, f))
+                foreach (var he in p.Dcel.Cycles[c])
+                {
+                    var g = p.Dcel.FaceOf(Dcel.Twin(he));
+                    if (p.Height[g] >= h && seen.Add(g)) queue.Enqueue(g);
+                }
+        }
+        return blocks.Count == 0 ? "?" : string.Join("+", blocks);
+    }
+
+    /// <summary>Planarises the level boundaries (and bridge fills), labels the plan faces and gives each its height.</summary>
+    private Plan BuildPlan(List<(P2 a, P2 b, int tag)> segs, List<Tag> tags, List<GapCloser.Bridge> fills)
+    {
+        var planarizer = new Planarizer(_tol);
+        foreach (var (a, b, t) in segs) planarizer.AddSegment(a, b, t);
+        for (var k = 0; k < fills.Count; k++)
+        {
+            var r = fills[k].Ring;
+            for (var i = 0; i < r.Count; i++) planarizer.AddSegment(r[i], r[(i + 1) % r.Count], tags.Count + k);
+        }
+        var pedges = planarizer.Build();
+        var pts = planarizer.Points;
+        var dcel = Dcel.Build(pts, pedges.Select(e => (e.u, e.v)).ToList());
+        var words = (tags.Count + fills.Count + 63) / 64;
+
+        // ---- 3. label faces by toggling tags across edges, starting from the outside
+        var edgeBits = pedges.Select(e =>
+        {
+            var b = new ulong[words];
+            foreach (var t in e.tags) b[t >> 6] ^= 1UL << (t & 63);
+            return b;
+        }).ToArray();
+        var label = new ulong[dcel.FaceCount][];
+        label[0] = new ulong[words];
+        var queue = new Queue<int>();
+        queue.Enqueue(0);
+        var inconsistent = 0;
+        while (queue.Count > 0)
+        {
+            var f = queue.Dequeue();
+            foreach (var c in FaceCycles(dcel, f))
+                foreach (var h in dcel.Cycles[c])
+                {
+                    var g = dcel.FaceOf(Dcel.Twin(h));
+                    var eb = edgeBits[h >> 1];
+                    var lg = new ulong[words];
+                    for (var w = 0; w < words; w++) lg[w] = label[f][w] ^ eb[w];
+                    if (label[g] is null) { label[g] = lg; queue.Enqueue(g); }
+                    else if (!label[g].AsSpan().SequenceEqual(lg)) inconsistent++;
+                }
+        }
+
+        // ---- 4. height of each face; which solids cover it; bridges raise faces to their height
+        var height = new double[dcel.FaceCount];
+        var covers = new List<int>[dcel.FaceCount];
+        var plan = new Plan { Edges = pedges, Points = pts, Dcel = dcel, Height = height, Covers = covers };
+        var lowest = new double[dcel.FaceCount];
+        for (var f = 0; f < dcel.FaceCount; f++)
+        {
+            covers[f] = new List<int>();
+            if (label[f] is null) { inconsistent++; continue; }
+            var curSolid = -1; var inside = false; var top = 0.0; var hasTop = false; var bottom = 0.0;
+            lowest[f] = double.PositiveInfinity;
+            void Close()
+            {
+                if (curSolid < 0) return;
+                if (inside) plan.OpenSolids.Add(curSolid);
+                if (hasTop) { covers[f].Add(curSolid); height[f] = Math.Max(height[f], top); lowest[f] = Math.Min(lowest[f], bottom); }
+            }
+            for (var t = 0; t < tags.Count; t++)
+            {
+                if ((label[f][t >> 6] & (1UL << (t & 63))) == 0) continue;
+                var tg = tags[t];
+                if (tg.Solid != curSolid) { Close(); curSolid = tg.Solid; inside = false; hasTop = false; bottom = tg.Z; }
+                inside = !inside;
+                if (!inside) { top = tg.Z; hasTop = true; }
+            }
+            Close();
+            if (height[f] > 0 && lowest[f] > _tol)
+                foreach (var s in covers[f]) plan.FilledUnder.Add(s);
+            for (var k = 0; k < fills.Count; k++)
+            {
+                var t = tags.Count + k;
+                if ((label[f][t >> 6] & (1UL << (t & 63))) != 0) height[f] = Math.Max(height[f], fills[k].Z);
+            }
+            if (height[f] < 0) height[f] = 0;
+        }
+        plan.Inconsistent = inconsistent;
+        return plan;
     }
 
     private void FlushSmallSteps(Dcel d, double[] height, Result res)

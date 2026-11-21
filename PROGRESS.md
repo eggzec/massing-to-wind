@@ -29,10 +29,43 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
-| M4 Hard faults | Not started (M3 already passes 11/31 smallGap, 9/30 shortEdge, 28/30 sliver) | — | — |
+| M4 Hard faults | In progress: step 1 gap closing done | 274/291 (smallGap 31/31) | 2026-11-21 |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-21 · solver · M4 step 1: gap closing below `minGap` (smallGap)
+- New `Union/GapCloser`: a morphological closing of the height field, one height level at a time. For each roof
+  level h, the slice "height ≥ h" of the plan is split into connected components; boundary walls (collinear pieces
+  chained) of *different* components closer than `minGap` get a bridge polygon, filled from the ground up to h.
+  Slices are nested, so a gap is filled up to the lower of the two blocks, and to the lower tower above a shared
+  podium.
+  - Walls facing each other within 10° of anti-parallel: the strip between them where one projects onto the other
+    (an exact rectangle for parallel walls, so walls that end together add no new vertex).
+  - Component pairs with no facing walls (corner to corner): for each pair of walls closer than `minGap`, the convex
+    hull of the parts of each wall within `minGap` of the other and in front of it (a small fillet).
+  - Gaps inside one component (a narrow inlet of a U) are left open (see D-032).
+  - `HeightFieldUnion` now builds its plan in a repeatable `BuildPlan`; bridges are added as extra tagged polygons
+    and the plan is built again (at most 4 rounds; a gap that cannot be bridged, or remains, gives `partial`).
+  - A distance within 1e-6 m of `minGap` counts as `minGap` (OBJ precision); it is not closed.
+  - Report op `closeGap` with `pair` (blocks on each side), `width_m` (narrowest), `fillHeight_m`, `minGap_m`.
+- Tests: 43 solver tests (+10): parallel gap filled to the lower block (volume exact, op contents), gaps of 1.0 /
+  1.2 / 5.0 m stay open, shorter neighbour bridged only over the facing stretch, corner-to-corner fillet, towers on
+  one podium closed above it to the lower tower, narrow inlet of one block not closed, case `minGap` respected, and
+  an FsCheck property: random rotation (0–360°), gap 0.02–1.98 m and height gives one shell with the exact bridged
+  volume below `minGap` and two shells at or above it.
+- Determinism: two full runs give byte-identical `repaired.obj` for all 291 cases. All 291 reports `repaired`, no
+  warnings.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2446/2446 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 43) · cases 274/291 · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 29/30 · farCoordinates 30/31 · flippedFaces 27/29 ·
+  floatingBlock 28/30 · openSurface 28/31 · overlap 29/29 · shortEdge 13/30 · sliver 30/30 · smallGap 31/31 ·
+  stackedFloors 32/32 · sunkBlock 29/30 · touchingWalls 29/30.
+- Also fixed by this step: shortEdge `case_0202` and `case_0302` (a jog left two parts of one block 0.17 m apart).
+- Remaining 17 failures, all shortEdge cases (M4 step 2): 16 fail `minEdge_m` only (an output edge shorter than
+  `minEdge`); `case_0196` fails `euler` (2 instead of 0: a courtyard closed off by a tiny feature).
+- Next: M4 step 2, short-edge and sliver removal.
+- Blockers: Q-S1 (owner; no case affected right now).
 
 ### 2026-11-19 · solver · M3 step 4: footprint union (stacked floors, overlaps, touching walls); M3 criteria met
 - New `Union/HeightFieldUnion` (with `Planar/Planarizer`, `Planar/Dcel`, `Union/ShellBuilder`). The output is

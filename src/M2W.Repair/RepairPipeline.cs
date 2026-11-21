@@ -68,8 +68,16 @@ public static class RepairPipeline
         }
 
         // 5. Union as a 2.5D height field: merges stacked floors, overlaps and touching walls; one shell per footprint.
-        var union = new HeightFieldUnion(solids, tol.Weld, tol.MinEdge).Run();
+        // 6. Gaps narrower than minGap between separate parts are bridged inside the union (closing per height level).
+        var union = new HeightFieldUnion(solids, tol.Weld, tol.MinEdge, tol.MinGap).Run();
         foreach (var p in union.Problems) log.Fail(p);
+        foreach (var g in union.ClosedGaps.GroupBy(g => (g.a, g.b)).OrderBy(g => g.Key.a, StringComparer.Ordinal)
+                     .ThenBy(g => g.Key.b, StringComparer.Ordinal))
+            log.Op("closeGap", pair: new[] { g.Key.a, g.Key.b }, width: Math.Round(g.Min(x => x.width), 6),
+                extra: new Dictionary<string, object>
+                {
+                    ["fillHeight_m"] = g.Max(x => x.z), ["minGap_m"] = tol.MinGap,
+                });
         foreach (var (from, to, faces) in union.FlushedSteps)
             log.Op("flushRoofStep", count: faces, extra: new Dictionary<string, object>
             {

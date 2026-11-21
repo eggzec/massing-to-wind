@@ -13,6 +13,22 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-032 · 2026-11-21 · solver (M4) · Gap closing: per-level closing between components, strips for facing walls
+- Context: AGREEMENT.md: "gaps narrower than minGap are closed and the blocks merged". A disk closing of the plan
+  would round every concave corner (arcs, many vertices); a square one depends on the axes, and sites are rotated.
+- Choice: at each roof level, close only between different connected components of the slice "height ≥ level".
+  Facing, nearly parallel walls (within 10°) get the strip where one projects onto the other; components without
+  such walls get convex-hull fillets of the parts of their walls within minGap of each other. Each bridge is filled
+  from the ground to the level, so a gap is filled to the lower block (the grey-scale closing of the height field).
+  Distances within 1e-6 m of minGap are not closed.
+- Alternatives: true disk closing (offset out then in) with arcs approximated; Clipper2 offsets (licence, D-027);
+  also closing narrow inlets within one part.
+- Why: the strip adds no vertices when walls end together, is exact for parallel walls and independent of
+  rotation; fillets are only used where nothing else connects. Inlets are within one shell, and the agreement asks
+  for gaps between blocks.
+- Revisit if: hidden cases need inlets or narrow courtyards closed, or curved/sharply non-parallel gaps need a
+  better bridge than a hull.
+
 ## D-027 · 2026-11-19 · solver (M3) · Per-object vertex lists; own polygon geometry, no Clipper
 - Context: blocks that touch may share or nearly share vertices; ground snap and welding must not move another
   block's geometry. Step 4 needs 2D polygon work (union, later offsets).
