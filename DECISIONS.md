@@ -13,6 +13,53 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-038 · 2026-11-22 · checker (M4 gate, Q-S1) · Plan containment of anchors accepts barycentric weights ≥ −1e-9
+- Context: `Shell.ContainsInPlan` (anchor matching, D-020) counted a point as inside a plan triangle only if all three
+  barycentric weights were ≥ 0. For an anchor exactly on an edge two triangles share (a rectangle's centre on the
+  diagonal of its split), rounding gives one weight of about −1e-17 to −2e-16 in **both** triangles, so the shell
+  counted as unmatched and `volume_m3`, `footprintArea_m2` and `maxHeight_m` failed on a correct output
+  (`case_0284`, Q-S1). Whether it happens depends on the coordinates, the anchor's decimal value and the order in
+  which each triangle lists its vertices, not only on which diagonal is used.
+- Choice: accept weights ≥ −`Shell.PlanWeightTol` = −1e-9 (owner's answer to Q-S1). Weights have no units, so the
+  bound is absolute. In length it is 1e-9 × the triangle's height over the edge: 1e-8 m for a 10 m triangle,
+  1e-5 m for a 10 km one, always below the 1e-6 m OBJ resolution at building scale. The bounding-box prefilter is
+  padded by 2 × 1e-9 × the box extent per axis (at most two weights can be negative), so it never rejects a point
+  the weight test accepts. "Edges included" is kept.
+- Audit of the other point and boundary tests in the checker:
+  - **Changed:** `Shell.ContainsInPlan`, both the weight test and its box prefilter. Its only caller is
+    `Grader.Match`, so the anchor rule (D-020) is the only behaviour affected.
+  - **Not changed, `Shell.SolidDistance`** (used by `BlockLocator` for `mustMerge` / `mustStaySeparate`, D-021): a
+    point on the surface is caught by its distance to the nearest triangle (≤ `Geom.TouchTol`, 1e-8 m). That
+    distance is continuous across shared edges, so a point on one has distance ≈ 0 to both triangles and cannot fall
+    between them. Interior points use the winding number with a threshold of 0.5, nowhere near rounding.
+  - **Not changed, `BlockLocator` voting:** ties within `AmbiguityTol` (1e-6 m) already stop a point on a wall two
+    shells share from voting; this is by design (D-021).
+  - **Not changed, `Geom.ClosestPointOnTriangle`:** its Voronoi-region sign tests can tip either way on a region
+    boundary, but the closest point is continuous there, so the distance changes only by rounding (~1e-15 m), far
+    below `TouchTol`. The same holds for `SegmentTouchesTriangle`, `TrianglesTouch` and `TriangleTriangleDistance`
+    (`minGap_m`, `noSelfIntersections`), which compare distances with `TouchTol`.
+  - **Not changed, `ShellGap.Distance` nesting test:** winding number of one vertex, threshold 0.5.
+  - **Not changed, `SelfIntersection.EdgeEntersCorner`:** an angular test with `AngleTol` (1e-10) on both sides; it
+    is not a plan-point test.
+  - **Not changed, `Grader.Measure` footprint:** classifies faces, not points (`n.Z >= 0` skips walls and roofs; a
+    wall whose normal rounds to −1e-17 in Z adds ~0 m²). `groundContact` uses `weld`.
+  - **Not changed, `Box.Distance` in `SolidDistance`:** exact for points within the box, and points on the surface
+    have already returned through the distance branch.
+- Tests (`AnchorContainmentTests`, hand-built meshes): three boxes, the Q-S1 box among them, with a decimal anchor at
+  the centre, under all 4 diagonal splits × 81 vertex rotations of the plan triangles: always contained and all
+  checks pass. Each box has triangulations the old rule misses, asserted so the test cannot pass by luck. Also:
+  points on outer, corner and slanted edges are contained; 1e-12 m outside an outer edge is contained; 1e-6 m outside
+  an axis-aligned or a slanted edge (inside the bounding box) is not; an anchor 1e-6 m outside every shell still
+  leaves its expected shell unmatched; the Q-S1 far-coordinate box, shifted to local coordinates and written through
+  a 6-decimal OBJ, passes in every triangulation. With the bound set to 0 (old rule), 8 of these 12 tests fail.
+- Alternatives: test containment against the bottom face as a polygon (more code, and needs the bottom faces to be
+  identified and joined, which a repaired shell does not promise); a tolerance in metres (needs scaling by the
+  triangle size to compare with weights; the owner chose the weight bound).
+- Why: smallest change that removes the double miss, approved by the owner. Graded results are unchanged: all 291
+  visible `result.json` files are byte-identical before and after.
+- Revisit if: anchors may legitimately sit within 1e-9 × triangle height outside a shell (not possible with v0.1
+  anchors, which are interior points of their shell's plan, D-017).
+
 ## D-037 · 2026-11-22 · owner (M4 gate) · Roof steps below `minEdge` are flushed to the higher roof, and expected answers include it
 - Context: neighbouring roofs whose heights differ by less than `minEdge` leave a wall step with edges shorter than
   `minEdge`. The expected answers kept the step, so no valid output could match them exactly. The solver already

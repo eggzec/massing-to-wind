@@ -25,6 +25,8 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
   exactly on a diagonal, rounding makes one weight about −1e-17 in both triangles. Fix: accept weights `>= -1e-9`.
   Checker agent implements it (see the 2026-11-21 owner entry in the log). Delete this item once the fix is merged and
   re-locked.
+- **Status (2026-11-22, checker): fixed on `check/m4-qs1`, awaiting owner merge.** See D-038 and the 2026-11-22
+  checker entry in the log.
 
 
 ## Current status
@@ -38,6 +40,31 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-22 · checker · Q-S1: anchors on a shared triangle edge are contained (D-038)
+- Fix: `Shell.ContainsInPlan` accepts barycentric weights ≥ −1e-9 (`Shell.PlanWeightTol`), edges still included.
+  Its bounding-box prefilter is padded by 2 × 1e-9 × the box extent, so it never rejects a point the weight test
+  accepts.
+- Audit of every other point and boundary test in the checker: listed in D-038. No other place can miss a point on
+  a shared edge: the `mustMerge` / `mustStaySeparate` block locator, `minGap_m` and `noSelfIntersections` work on
+  distances with `TouchTol`, or on the winding number. Nothing else changed.
+- Tests: new `AnchorContainmentTests` (12 tests, hand-built meshes, no case files):
+  - three boxes with the anchor at the centre (the Q-S1 box among them), under all diagonal splits and all vertex
+    rotations of the plan triangles: contained, and all checks pass;
+  - points on outer edges, corners and a slanted edge: contained; 1e-6 m outside an edge: not contained;
+  - the Q-S1 far-coordinate box, shifted to local coordinates through a 6-decimal OBJ, passes.
+  - Each centre test asserts that the old rule misses in some triangulation. With the bound set to 0, 8 of the 12
+    fail.
+- No other behaviour change: all 291 `out/case_*/result.json` are byte-identical to a run on `main` @ `658cc96`
+  before the change.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2477/2477 (Geometry 88, Cli 31, Generator 2198, Checker 98,
+  Repair 62) · cases 291/291 · locks **FAIL** only for `src/M2W.Checker/Shell.cs` and
+  `tests/M2W.Checker.Tests/AnchorContainmentTests.cs` (approved for Q-S1; owner re-tags at merge) · everything else
+  green.
+- Next: after the owner merges `gen/m4-r1` into `main`, merge `main` into `check/m4-qs1`, validate again on the
+  regenerated cases (including the clean-control zero-repair test) and report. If the generator also used D-038,
+  renumber this entry then.
+- Blockers: none (waiting for the generator merge for task 5).
 
 ### 2026-11-22 · owner · R1 written into AGREEMENT.md; lock moved; branches for the M4 gate work
 - R1 action 1 done. AGREEMENT.md has a new paragraph under the tolerance table: *"Roof steps below `minEdge`: roof
