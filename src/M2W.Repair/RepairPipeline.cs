@@ -78,6 +78,16 @@ public static class RepairPipeline
                 {
                     ["fillHeight_m"] = g.Max(x => x.z), ["minGap_m"] = tol.MinGap,
                 });
+        foreach (var g in union.ThinRaised.GroupBy(t => t).OrderBy(g => g.Key.from).ThenBy(g => g.Key.to))
+            log.Op("raiseThinRegion", count: g.Count(), extra: new Dictionary<string, object>
+            {
+                ["from_m"] = g.Key.from, ["to_m"] = g.Key.to, ["minEdge_m"] = tol.MinEdge,
+            });
+        foreach (var (kind, n) in union.OutlineFills)
+            log.Op(kind, count: n, extra: new Dictionary<string, object> { ["minEdge_m"] = tol.MinEdge });
+        if (union.ShortEdgeSnaps > 0)
+            log.Op("collapseShortEdges", count: union.ShortEdgeSnaps,
+                extra: new Dictionary<string, object> { ["minEdge_m"] = tol.MinEdge });
         foreach (var (from, to, faces) in union.FlushedSteps)
             log.Op("flushRoofStep", count: faces, extra: new Dictionary<string, object>
             {
@@ -105,7 +115,42 @@ public static class RepairPipeline
             var check = ShellCheck.Check(shells[i].Vertices, shells[i].Triangles);
             if (!check.Ok) log.Fail($"shell_{i:000}: not a valid closed shell ({check})");
         }
+        // Own check of the output against minEdge (a failure here is reported, never hidden) and a count of
+        // triangles thinner than minAngleDeg, which v0.1 does not grade (D-025).
+        var (shortest, where) = (double.PositiveInfinity, "");
+        var thin = 0;
+        for (var i = 0; i < shells.Count; i++)
+        {
+            var v = shells[i].Vertices.Select(OutputShell.Round6).ToList();
+            foreach (var t in shells[i].Triangles)
+            {
+                var (a, b, c) = (v[t.A], v[t.B], v[t.C]);
+                foreach (var (p, q) in new[] { (a, b), (b, c), (c, a) })
+                {
+                    var len = (q - p).Length;
+                    if (len < shortest) (shortest, where) = (len, $"shell_{i:000}");
+                }
+                if (MinAngleDeg(a, b, c) < tol.MinAngleDeg) thin++;
+            }
+        }
+        if (shortest < tol.MinEdge - GapCloser.Slack)
+            log.Fail($"{where}: an edge of {shortest:0.######} m is shorter than minEdge {tol.MinEdge} m");
+        if (thin > 0)
+            log.Note($"{thin} output triangles have an angle below minAngleDeg {tol.MinAngleDeg} deg (long low or tall " +
+                     "narrow walls, thin roof pieces); not graded in v0.1 (D-025)");
         return shells;
+    }
+
+    /// <summary>Smallest angle of a triangle, in degrees.</summary>
+    public static double MinAngleDeg(Vec3 a, Vec3 b, Vec3 c)
+    {
+        static double At(Vec3 p, Vec3 q, Vec3 r)
+        {
+            var u = q - p; var w = r - p;
+            var n = u.Length * w.Length;
+            return n == 0 ? 0 : Math.Acos(Math.Clamp(Vec3.Dot(u, w) / n, -1, 1)) * 180 / Math.PI;
+        }
+        return Math.Min(At(a, b, c), Math.Min(At(b, c, a), At(c, a, b)));
     }
 
     /// <summary>Fallback output: each object as its own shell (status is partial whenever this is used).</summary>

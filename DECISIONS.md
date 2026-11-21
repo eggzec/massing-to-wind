@@ -13,6 +13,41 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-035 · 2026-11-21 · solver (M4) · Output slivers are reported, not removed
+- Context: 100 of 291 outputs contain triangles below `minAngleDeg` (long low walls, tall narrow walls, thin roof
+  pieces). The `sliver` fault itself is gone: the output is rebuilt from the plan, input triangles never survive.
+- Choice: count them and say so in `warnings` (status unchanged). No Steiner points yet.
+- Alternatives: split long walls and column heights (adds vertices to roofs and walls, more triangles); constrained
+  Delaunay roofs with refinement.
+- Why: the owner chose not to grade minimum angle in v0.1 (D-025); adding vertices now risks new short edges for no
+  graded gain. Honest reporting keeps it visible.
+- Revisit if: v0.2 grades `minAngle_deg` or the wind mesher needs it.
+
+## D-034 · 2026-11-21 · solver (M4) · Short outline edges: thin regions raised, jogs by least change of area
+- Context: a short edge in the outline is a ledge, a jog, a shallow bump or notch, a cut corner or a split vertex.
+  Removing it means moving geometry by less than `minEdge`; the original (which wall was moved) is not knowable.
+- Choice: (1) regions thinner than `minEdge` next to a higher roof are raised to it (like D-030 in plan); (2) a
+  bump/notch section is cut/filled onto its neighbours' line if it is no longer than both neighbours together; (3)
+  a single jog moves the shorter wall onto the other's line; (4) a convex cut corner is squared; (5) whatever is
+  left is merged by snapping (D-033).
+- Alternatives: always add material (fill outward); always the lower-numbered point; ask the generator's rule.
+- Why: least change bounds the error by depth × the shorter wall, whichever piece the fault moved. On the visible
+  cases: ledges exact, bumps exact, two jogs at 19 % and 32 % of the tolerance where the fault had moved the
+  other piece. Reading the generator's rule would tune the solver to the grader.
+- Revisit if: hidden cases fail on jogs close to `minEdge` deep along long walls.
+
+## D-033 · 2026-11-21 · solver (M4) · No plan edge shorter than minEdge: final plan merged at minEdge, by priority
+- Context: after the outline rules some short edges remain (several in a row, kinks, crossings).
+- Choice: the final plan is planarised with tolerance `minEdge − 1e-6`: points closer are one point, a segment
+  closer to a point is split there. All points are then pairwise ≥ `minEdge` apart, so every plan edge, wall edge and
+  roof diagonal is. Surviving point: lowest outline first (the footprint at the ground), then the sharper corner of
+  the weld-precision plan, then the higher roof. Gaps are bridged before (at weld precision).
+- Alternatives: collapse edges on the final mesh (needs re-checking manifoldness and crossings); first-come order.
+- Why: one rule gives the guarantee by construction. First-come order could move a tall block's wall onto a lower
+  block across a narrow gap (found by the FsCheck property), or shave half a ledge off.
+- Revisit if: snapping is ever seen to change topology (a courtyard closing); the solver's own check reports any
+  edge below `minEdge` as `partial`.
+
 ## D-032 · 2026-11-21 · solver (M4) · Gap closing: per-level closing between components, strips for facing walls
 - Context: AGREEMENT.md: "gaps narrower than minGap are closed and the blocks merged". A disk closing of the plan
   would round every concave corner (arcs, many vertices); a square one depends on the axes, and sites are rotated.

@@ -29,10 +29,65 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
-| M4 Hard faults | In progress: step 1 gap closing done | 274/291 (smallGap 31/31) | 2026-11-21 |
+| M4 Hard faults | In progress: steps 1 (gaps) and 2 (short edges, slivers) done | 291/291 | 2026-11-21 |
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-21 · solver · M4 step 2: short-edge and sliver removal (shortEdge, sliver)
+- The plan is now repaired in phases before the shells are built (`HeightFieldUnion`), each phase building the
+  plan again with what the previous one added:
+  1. at weld precision: gap bridges (step 1) until none is left;
+  2. at weld precision: **thin regions** (one height, 2 × area / perimeter < `minEdge`, next to a higher roof) are
+     raised to the highest roof beside them, as roof steps are (D-030): a ledge thinner than `minEdge` becomes part
+     of the block above it and the footprint is kept. Op `raiseThinRegion`;
+  3. at weld precision: **short outline edges** between two long walls with the same heights (outline = plan edges
+     where the height changes, collinear pieces chained):
+     - a section with a jog at each end, both stepping the same way (shallow bump or notch), no longer than its two
+       neighbours together: cut back / filled out onto their line (ops `cutBump`, `fillNotch`);
+     - a single jog between parallel walls: the shorter wall moves onto the other's line (fill if the strip is
+       outside, cut if inside; ops `alignJog`, `alignJogCut`). Least change of area, see D-034;
+     - a convex corner cut off by a short edge (not a kink in line with a wall): the corner is squared
+       (`squareCorner`);
+     Fills can now also cut (lower to a height); cuts apply after fills;
+  4. final plan with points closer than `minEdge` merged and segments within `minEdge` of a point split there, so
+     **no plan edge is shorter than `minEdge`**. Which point survives a merge: the one on the lowest outline (the
+     footprint), then the sharper corner of the phase-3 plan, then the one on the higher roof (D-033). Gaps were
+     bridged before this, so a gap narrower than `minEdge` is still filled to the lower block. Op
+     `collapseShortEdges` (merges/splits that moved geometry beyond weld).
+- Own output check (new): any output edge shorter than `minEdge` gives `partial`; triangles thinner than
+  `minAngleDeg` are counted in a warning that does not change the status (not graded in v0.1, D-025, D-035).
+- Bugs found while doing this (by the new FsCheck property and by tolerance margins, not by failures):
+  - snapping by first-come point order could move a tall block's wall onto a lower block's across a gap narrower
+    than `minEdge` (volume error gap × wall × height difference: > 1 % for a 0.2 m gap at a 30 m, 10 m wide
+    block). Fixed by the merge priority above;
+  - point priority alone shaved half a ledge off `case_0222`/`case_0160` (78 % of the volume tolerance used,
+    still passing). Fixed by raising thin regions first (now 0 %) and the corner tie-break;
+  - per-jog decisions moved both long neighbours of a shallow bump outward in `case_0241` (+3.7 m², 26 %); now
+    decided per section (8 %).
+- Tests: 52 solver tests (+9): thin ledge absorbed (volume exact, shortest edge ≥ `minEdge`), ledge of 0.3 m at
+  `minEdge` 0.25 kept, Z-jog cut back / filled out, shallow bump cut and notch filled (only y = 0 and y = 10
+  remain), cut corner squared, split vertex next to a corner merged, case `minEdge` respected (0.3 m jog kept at
+  0.25, removed at 0.4), and an FsCheck property: rotated L-shaped block with a random bump, notch or jog of
+  0.01–0.24 m gives one closed shell, no edge below `minEdge`, volume within depth × wall of the clean block, and
+  repairing again changes nothing. Properties stress-run once at 600/600/300 cases: all pass.
+- Determinism: two full runs give byte-identical `repaired.obj` for all 291 cases. All 291 reports `repaired`.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2455/2455 (Geometry 88, Cli 31, Generator 2198, Checker 86,
+  Repair 52) · cases **291/291** · locks OK · **VALIDATE: GREEN**.
+- Per fault (passed/total): clean 10/10 · duplicateVertices 30/30 · farCoordinates 31/31 · flippedFaces 29/29 ·
+  floatingBlock 30/30 · openSurface 31/31 · overlap 29/29 · shortEdge 30/30 · sliver 30/30 · smallGap 31/31 ·
+  stackedFloors 32/32 · sunkBlock 30/30 · touchingWalls 30/30.
+- Margins (how much of the volume/footprint tolerance is used, worst first): `case_0336` 32 %, `case_0298` 19 %,
+  `case_0180` 11 %, everything else < 10 %. 0336 and 0298 are jogs where the expected answer moved the other wall
+  than the least-change rule does; which piece a jog fault moved cannot be told from the geometry (D-034). Known
+  risk for hidden cases: a jog of depth close to `minEdge` (0.4 m in some cases) along a long wall could exceed 1 %.
+- Slivers: 100 of 291 outputs have triangles below `minAngleDeg` (long low walls, tall narrow walls between close
+  heights, thin roof pieces). Not graded (D-025); now reported in `warnings`. Removing them needs Steiner points
+  on walls and roofs (possible without T-junctions: wall columns are shared per vertex). Not done; see D-035.
+- Next: M4 step 3 (combined-fault cases: all 40+ pass already; review margins and partial paths) and step 4
+  (properties: moving/rotating input keeps volume and topology, repair twice = once, extended to gaps and
+  short edges).
+- Blockers: Q-S1 (owner; no case affected right now).
 
 ### 2026-11-21 · solver · M4 step 1: gap closing below `minGap` (smallGap)
 - New `Union/GapCloser`: a morphological closing of the height field, one height level at a time. For each roof

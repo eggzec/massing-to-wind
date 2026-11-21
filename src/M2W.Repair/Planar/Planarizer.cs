@@ -13,10 +13,20 @@ public sealed class Planarizer
     private readonly Dictionary<(long, long), List<int>> _grid = new();
     private readonly List<(int u, int v, int tag)> _segs = new();
 
-    public Planarizer(double tolerance)
+    private readonly double _reportAbove;
+
+    /// <param name="tolerance">Points closer than this are one point; a segment passing closer than this to a point is
+    /// split there.</param>
+    /// <param name="reportAbove">Merges and splits that move geometry further than this are counted in
+    /// <see cref="Snapped"/>.</param>
+    public Planarizer(double tolerance, double reportAbove = double.PositiveInfinity)
     {
         _tol = Math.Max(tolerance, 1e-6);
+        _reportAbove = reportAbove;
     }
+
+    /// <summary>Number of point merges and vertex splits that moved geometry by more than <c>reportAbove</c>.</summary>
+    public int Snapped { get; private set; }
 
     public List<P2> Points { get; } = new();
 
@@ -31,7 +41,11 @@ public sealed class Planarizer
             if (_grid.TryGetValue((kx + dx, ky + dy), out var list))
                 foreach (var i in list)
                     if ((Points[i] - p).Length <= _tol && (best < 0 || i < best)) best = i;
-        if (best >= 0) return best;
+        if (best >= 0)
+        {
+            if ((Points[best] - p).Length > _reportAbove) Snapped++;
+            return best;
+        }
         var q = new P2(Math.Round(p.X, 6), Math.Round(p.Y, 6));
         var id = Points.Count;
         Points.Add(q);
@@ -89,11 +103,13 @@ public sealed class Planarizer
                 if (p.Y < minY || p.Y > maxY) continue;
                 var t = P2.Dot(p - a, d) / len2;
                 if (t <= 0 || t >= 1) continue;
-                if ((a + d * t - p).Length > _tol) continue;
+                var off = (a + d * t - p).Length;
+                if (off > _tol) continue;
                 // Never split so close to an end that the piece would collapse.
                 if ((p - a).Length <= _tol || (p - b).Length <= _tol) continue;
                 if (!splits.TryGetValue(s, out var l)) splits[s] = l = new List<(double, int)>();
                 l.Add((t, w));
+                if (off > _reportAbove) Snapped++;
             }
         }
         return Apply(splits);
