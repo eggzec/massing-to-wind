@@ -13,6 +13,49 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-046 · 2026-11-22 · checker (M5) · CI fails on a missing `lock-v0.1` tag; locally it still only warns
+- Context: `check-locks.sh` skips with a WARNING (exit 0) when the tag is missing (D-026), so a CI checkout without
+  tags, or a repository where the tag was never pushed, would go GREEN without checking any lock.
+- Choice: opt-in env `M2W_REQUIRE_LOCK_TAG=1` makes a missing tag `locks: FAIL` (exit 1, with the hint
+  `git push -f origin lock-v0.1`). `ci.yml` sets it for every job and checks out with `fetch-depth: 0` and
+  `fetch-tags: true`. Any other value, or unset, keeps today's local behaviour. The env reaches the script from
+  `validate.ps1` too (Git Bash inherits the environment), so the Windows job is covered.
+- Alternatives: always fail on a missing tag (a fresh clone with `--no-tags` would go RED locally for a reason
+  unrelated to the change, as D-026 says); detect CI through `CI=true` (implicit: any tool that sets `CI` would
+  switch it, and it cannot be turned on locally for a test without pretending to be CI).
+- Why: CI is the gate that must never pass without checking; one explicit switch keeps local runs unchanged and
+  can be tested locally (scratch clone with the tag deleted: FAIL with the env, WARNING without).
+- Revisit if: the owner wants the strict mode by default (then flip the default and let local runs opt out).
+
+## D-045 · 2026-11-22 · checker (M5) · CI: validate and determinism on Linux and Windows, cross-OS hash comparison
+- Context: M5 needs CI. CLAUDE.md asks for byte-identical output for the same input, and D-009 wants it across
+  OSes. Until now one Ubuntu job ran `validate.sh` and nothing compared two runs or two OSes.
+- Choice:
+  - `scripts/determinism.sh` / `.ps1`: build, run `run-all cases` twice into `out/determinism/run1` and `run2`, and
+    compare by SHA-256 every `repaired.obj`, `result.json`, `summary.json` (raw bytes) and `report.json` (after
+    replacing the value of `"runtime_ms"` with 0, D-028). A file in only one run is a difference. Exit 1 naming the
+    files. `--compare A B` (`-Compare A B`) compares two existing folders with the same code, which is how a planted
+    difference is tested. A run with no `repaired.obj` fails rather than passing vacuously.
+  - `out/hashes.txt`: `caseId sha256(repaired.obj)` per line, ordinal sort, LF, UTF-8 without BOM. Both scripts
+    write the same bytes (checked locally: identical SHA-256 of the two files).
+  - `ci.yml`: matrix `ubuntu-latest` (`validate.sh`, `determinism.sh`) and `windows-latest` (`validate.ps1`,
+    `determinism.ps1` under pwsh), `fail-fast: false`, 30-minute timeout, NuGet cache keyed on the project files.
+    The determinism and upload steps run even when validate failed (`!cancelled()`), so a red run still shows the
+    hashes. Job `cross-os` (5 minutes) downloads both `hashes-Linux` / `hashes-Windows` artifacts and fails unless
+    they are byte-identical, listing the cases that differ. Actions pinned to commit SHAs (tag in a comment):
+    checkout v7.0.1, setup-dotnet v6.1.0, cache v6.1.0, upload-artifact v7.0.2, download-artifact v8.0.2 (inputs
+    read from each `action.yml` at the pinned commit). `permissions: contents: read`; superseded runs are cancelled.
+  - The old "create solution if missing" step is dropped: `M2W.sln` is committed.
+- Alternatives: a C# determinism tool in `M2W.Cli` (a new command in a shared project, and the brief asks for
+  scripts); comparing `report.json` not at all (would miss nondeterminism in ops and warnings: 239 of 311 raw
+  reports differ between two local runs only because of `runtime_ms`); hashing `result.json` across OSes too
+  (left out: the brief names `repaired.obj`; result.json differences would follow from it); tag-pinned actions (a
+  tag can be moved).
+- Why: both shells run the same check the same way locally and in CI, and the cross-OS step turns D-009's goal into
+  a gate.
+- Revisit if: the cross-OS step ever fails (then the cause is platform floating point, see D-009, and the owner
+  decides between fixing the solver and comparing with a tolerance).
+
 ## D-042 · 2026-11-22 · solver (M5) · Region warnings carry a plan box and an area or count; one new op, `fillUnsupported`
 - Context: with a district in one object, "block X has no support below part of it" could not be found (owner
   benchmark, 2026-11-21, problem 2). The owner approved adding fields, not renaming or removing any.

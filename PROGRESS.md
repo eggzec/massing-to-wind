@@ -19,6 +19,56 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-22 · checker · M5 CI on GitHub Actions with a determinism check (branch `check/m5`, not merged)
+- Feature freeze respected: no change to `src/M2W.Checker/` or its tests. Changed: `.github/workflows/ci.yml`,
+  `scripts/check-locks.sh` (one opt-in); new: `scripts/determinism.sh`, `scripts/determinism.ps1`. D-045 (CI design),
+  D-046 (lock-tag rule).
+- **Determinism script** (D-045): runs `run-all cases` twice into `out/determinism/run1|run2` and compares SHA-256 of
+  every `repaired.obj`, `result.json`, `summary.json`, and `report.json` with `runtime_ms` zeroed. Exit 1 naming the
+  files. Writes `out/hashes.txt` (`caseId sha256(repaired.obj)`, sorted). `--compare A B` / `-Compare A B` compares
+  two existing folders.
+- **CI** (D-045): `ubuntu-latest` runs `validate.sh` + `determinism.sh`; `windows-latest` runs `validate.ps1` +
+  `determinism.ps1` (pwsh). Both upload `out/hashes.txt` (`hashes-Linux`, `hashes-Windows`). Job `cross-os` fails
+  unless the two files are byte-identical. NuGet cache, timeouts (30 / 5 min), `fetch-depth: 0` + `fetch-tags`,
+  actions pinned to commit SHAs, `M2W_REQUIRE_LOCK_TAG=1`.
+- **Lock tag** (D-046): with `M2W_REQUIRE_LOCK_TAG=1` a missing `lock-v0.1` is `locks: FAIL`. Unset: WARNING and skip
+  as before.
+- **Local proof** (Windows 11, Git Bash + Windows PowerShell 5.1):
+  - `determinism.sh`: OK, 934 files identical (311 `repaired.obj`). `determinism.ps1`: OK, 934 files identical.
+  - The two `out/hashes.txt` (bash and PowerShell) are byte-identical (SHA-256 `fdb5d2e4…1262`), 311 lines.
+  - Planted differences, on a copy of run2, with `--compare` / `-Compare`, same result in both shells:
+    - one byte flipped in `case_0205/repaired.obj` (offset 40, `0x30` → `0x31`): FAIL, `differs: case_0205/repaired.obj`,
+      exit 1;
+    - only `runtime_ms` changed in `case_0301/report.json`: OK, exit 0 (the exclusion works, and is needed: 239 of
+      311 raw reports differ between two runs);
+    - `status` changed in that report and `case_0410/result.json` deleted: FAIL naming both, exit 1.
+  - `check-locks.sh` in a scratch clone with the tag deleted: unset or `=0` gives WARNING and exit 0; `=1` gives FAIL
+    and exit 1. The same FAIL when called from PowerShell through Git Bash (the Windows CI path).
+  - The `cross-os` compare script, run locally on the two hash files: OK; with one hash changed and one line deleted:
+    FAIL listing `case_0205` (different) and `case_0410` (MISSING); with a file missing: FAIL.
+  - `ci.yml` parses (YamlDotNet, scratch project outside the repo): jobs `validate` (8 steps) and `cross-os` (2 steps).
+  - **Not tested locally:** Linux (WSL has no .NET), PowerShell 7 (not installed here), the GitHub runs themselves.
+- **Owner: what to look for after pushing `check/m5`** (Actions tab → workflow `ci`):
+  1. Three jobs: `validate (ubuntu-latest)`, `validate (windows-latest)`, `cross-OS determinism (Linux vs Windows)`.
+     All green.
+  2. In each validate job's log: `locks: OK` (not WARNING, not FAIL), `VALIDATE: GREEN`, `"casesPassed": 311`, and
+     `determinism: OK — 934 files identical (311 repaired.obj; …)` then `wrote out/hashes.txt (311 cases)`.
+  3. Run page → Artifacts: `hashes-Linux` and `hashes-Windows`. The `cross-os` job prints and puts in the run summary:
+     `cross-os: OK, 311 cases, repaired.obj byte-identical on Linux and Windows`.
+  4. If `locks: FAIL — no lock-v0.1 tag`: the tag is not on GitHub; `git push -f origin lock-v0.1`. Today
+     `origin` has `lock-v0.1` at `5c5c7a6`, the same as locally. After each future tag move, push it with `-f`,
+     or CI goes RED on the locks step.
+  5. If `cross-os` fails, it lists the cases whose `repaired.obj` differ between Linux and Windows. That is a real
+     finding (platform floating point, D-009), not a CI fault. Send it to the solver; do not loosen the check.
+  6. First run: the NuGet cache step reports a miss; later runs report a hit.
+- **README badge** (README.md is the solver's; please add this line there):
+  `![ci](https://github.com/rehman-saif/massing-to-wind/actions/workflows/ci.yml/badge.svg)`
+- validate (`scripts/validate.ps1`, and `scripts/validate.sh` with `M2W_REQUIRE_LOCK_TAG=1`): build ✅ · tests
+  2929/2929 (Geometry 88, Cli 31, Generator 2636, Checker 98, Repair 76) · cases 311/311 · locks OK ·
+  **VALIDATE: GREEN** (61 s locally).
+- Next: owner pushes `check/m5` and checks the first CI run as above, then merges.
+- Blockers: none.
+
 ### 2026-11-22 · owner · M4 gate: approved, feature freeze
 - **M4 criteria met** (MILESTONES.md): gap closing below `minGap`, sliver and short-edge removal, combined-fault
   cases, randomised property tests (solver M4 steps 1–4). Target ≥ 80 % with every failure explained: 311/311
