@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using M2W.Geometry;
 using M2W.Geometry.Models;
 using M2W.Geometry.Stages;
-using M2W.Repair.Union;
+using M2W.Repair.Model;
 using Xunit.Abstractions;
 
 namespace M2W.Repair.Tests;
@@ -93,15 +93,8 @@ public class Step9ScaleTests(ITestOutputHelper output)
     {
         var mesh = SyntheticCity.Build(Seed + 2, parts, rotated).AsObjects();
         var fast = ObjText(TestMeshes.Repair(mesh));
-        try
-        {
-            GapCloser.FullScan = true;
-            Assert.Equal(fast, ObjText(TestMeshes.Repair(mesh)));
-        }
-        finally
-        {
-            GapCloser.FullScan = false;
-        }
+        var full = ObjText(TestMeshes.Repair(mesh, options: new RepairOptions { FullGapScan = true }));
+        Assert.Equal(fast, full);
     }
 
     [Fact]

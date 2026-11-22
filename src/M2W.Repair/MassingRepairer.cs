@@ -14,7 +14,14 @@ namespace M2W.Repair;
 /// </summary>
 public sealed class MassingRepairer : ICaseRepairer
 {
-    public const string Version = "0.7.0";
+    public const string Version = "0.7.1";
+
+    private readonly RepairOptions _options;
+
+    public MassingRepairer() : this(RepairOptions.Default) { }
+
+    /// <summary>A repairer with internal switches (tests, D-048); each instance has its own.</summary>
+    internal MassingRepairer(RepairOptions options) { _options = options; }
 
     public RepairOutcome Repair(RepairRequest request)
     {
@@ -24,7 +31,7 @@ public sealed class MassingRepairer : ICaseRepairer
         List<OutputShell> shells;
         try
         {
-            shells = RepairPipeline.Run(request.Input, shift, request.Case.Tolerances, log);
+            shells = RepairPipeline.Run(request.Input, shift, request.Case.Tolerances, log, _options);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {

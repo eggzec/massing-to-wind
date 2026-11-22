@@ -13,6 +13,66 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-049 · 2026-11-22 · solver (M5, record of M3 choices) · Early steps: weld, cleanup, orientation, holes, ground snap
+- Context: the README lists every pipeline step with its decision; steps 1–3 had none of their own (only D-027).
+- Choice, as built in M3 and unchanged since:
+  1. **Weld** inside one object only (D-027): clusters of vertices closer than `weld` (uniform grid of cell `weld`
+     and union-find, so chains merge) keep the position of their lowest-numbered vertex, exactly as written in the
+     input. Then repeated indices are collapsed, polygons with fewer than three distinct vertices dropped, polygons
+     triangulated in their own plane (`Triangulator`; a polygon that is not simple is fan-triangulated, `partial`), and
+     triangles using the same three vertices as an earlier one (either orientation) dropped.
+  2. **Orientation:** spread across edges used by exactly two triangles (breadth-first); every edge-connected
+     component with negative signed volume is reversed. **Holes:** a free edge with another free edge's vertex within
+     `weld` of it is split there (T-junction); remaining free-edge loops are filled, coplanar nested loops as one
+     polygon with holes (a deleted courtyard floor). Loops that cannot be filled are left open, located, `partial`.
+  3. **Ground snap:** a block (all `B<nn>_F..` objects of one `B<nn>`, or the original object of split parts) whose
+     lowest point is within `groundSnap` of Z = 0, above or below, is moved rigidly onto it. Blocks further up are
+     left (they may stand on another block); blocks further below are left and reported (`partial`).
+- Alternatives: global welding (moves other blocks' vertices, D-027); centroid of each weld cluster (moves exact
+  input coordinates); snapping each object rather than each block (tears stacked floors apart).
+- Why: each step keeps input coordinates exact where it can, and never moves one block because of another.
+- Revisit if: the input order of vertices inside an object must not matter at weld scale (KNOWN_LIMITATIONS).
+
+## D-048 · 2026-11-22 · solver (M5) · Internal switches go in an options object passed down, not a static
+- Context: `GapCloser.FullScan` was a static test switch; a test setting it could change another test running in
+  parallel (M4 gate, minor item 2).
+- Choice: an internal `RepairOptions` record (`FullGapScan`, default off) passed explicitly: `MassingRepairer`
+  (internal constructor; the public one uses the defaults) → `RepairPipeline.Run` → `HeightFieldUnion.Options` →
+  `GapCloser.Find(…, fullScan)`. Public signatures are kept (new internal overloads). The static is gone.
+- Alternatives: `[Collection]` to serialise the tests using it (still global state); `AsyncLocal` (hidden state).
+- Why: explicit state cannot leak between repairs. Output unchanged (validate, and the full-scan test still agrees).
+- Revisit if: more switches appear; they go in the same record.
+
+## D-047 · 2026-11-22 · solver (M5) · Output order from geometry: shells, vertices and triangles sorted
+- Context: the same model as one object or one object per part gave the same geometry but a few shells in a
+  different order (owner benchmark, M4 gate minor item 1). Shell order came from plan face numbering, which follows
+  the order segments were added, so the order of input objects.
+- Choice: when the union's shells are built (and for the per-object fallback), each shell is renumbered: vertices in
+  order of their written position (X, then Y, then Z, after rounding to 6 decimals), each triangle rotated to start
+  at its smallest index (orientation kept), triangles sorted. Shells are sorted by their sorted vertex lists, so the
+  first is the one with the lowest ground corner (smallest X, then Y), then the rest of the list, then the
+  triangles. Report shell names (`unionBlocks.shell`) and warnings use the new numbers. `solverVersion` 0.7.1.
+- Test (`Step10OrderTests`): a synthetic district (120 parts, on the axes and turned) with its objects in four
+  shuffles; as one object (parts shuffled in it) and one object per part; and with vertices renumbered and faces
+  reordered too: byte-identical `repaired.obj` every time. Without the change 6 of the 7 tests fail.
+- Guard, old vs new solver, all 311 visible and 930 unseen cases (seeds 777, 2024, 99991, current generator):
+  - **all 1,241 `repaired.obj` change bytes** (every file is renumbered); **none changes geometry**: each holds the
+    same shells with the same oriented triangles, compared by written coordinates;
+  - `result.json`: every check keeps its `pass`. `value` changes in two ways, neither from geometry: (a) 139 checks
+    in 117 cases (visible 26 in 21) are `volume_m3` / `footprintArea_m2` of multi-shell cases where several shells tie
+    (usually all exact): the per-shell numbers in `detail` are the same set, but the checker reports another of the
+    tied shells; (b) 3 visible checks (`case_0118`, `case_0119`, `case_0185`) differ in the 12th significant digit,
+    the checker adding the same triangles in another order.
+- Also measured: shuffling the objects of every visible and unseen case (two shuffles) gives the same bytes in all
+  but 4 unseen cases. Two causes remain, both below tolerance: points of different objects within `weld` keep the
+  one met first in the planarizer (3 cases, 0.1–0.5 mm), and a tie between equally good roof triangulations depends
+  on where the outline starts (1 case). Starting every roof outline at its lowest point fixes the second but changes
+  diagonals in 254 of the 1,241 outputs (all still pass), so under the feature freeze it is not done; asked the owner.
+- Alternatives: sort shells only (vertex and triangle order still follow the input); a key of lowest corner and
+  area only (can tie); canonicalise in the OBJ writer (shared code, and report names would not match).
+- Why: sorting by written coordinates is total, cheap (one sort per shell), and moves nothing.
+- Revisit if: the owner approves canonical tie-breaks for welding and roof triangulation (v0.2).
+
 ## D-042 · 2026-11-22 · solver (M5) · Region warnings carry a plan box and an area or count; one new op, `fillUnsupported`
 - Context: with a district in one object, "block X has no support below part of it" could not be found (owner
   benchmark, 2026-11-21, problem 2). The owner approved adding fields, not renaming or removing any.

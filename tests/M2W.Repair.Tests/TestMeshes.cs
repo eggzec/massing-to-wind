@@ -44,8 +44,8 @@ internal static class TestMeshes
         Files = new CaseFileNames { Input = "input.obj" },
     };
 
-    public static RepairOutcome Repair(Mesh input, Vec3? origin = null, Tolerances? tol = null) =>
-        new MassingRepairer().Repair(new RepairRequest { Case = Case(origin, tol), Input = input });
+    public static RepairOutcome Repair(Mesh input, Vec3? origin = null, Tolerances? tol = null, RepairOptions? options = null) =>
+        new MassingRepairer(options ?? RepairOptions.Default).Repair(new RepairRequest { Case = Case(origin, tol), Input = input });
 
     /// <summary>Checks every output shell with the solver's own shell check and returns total volume.</summary>
     public static double AssertClosedShells(Mesh m)

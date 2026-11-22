@@ -56,6 +56,9 @@ public sealed class HeightFieldUnion
     private readonly double _minGap;
     private readonly double _planTol;
 
+    /// <summary>Internal switches (D-048); never change the result.</summary>
+    internal RepairOptions Options { get; init; } = RepairOptions.Default;
+
     /// <param name="tolerance">Weld tolerance: points and heights closer than this are the same.</param>
     /// <param name="minEdge">Neighbouring roofs whose heights differ by less than this are made flush (raised to the
     /// higher one), because the step between them would be an edge shorter than minEdge.</param>
@@ -179,7 +182,7 @@ public sealed class HeightFieldUnion
                 break;
             }
             var added = new List<Fill>();
-            var found = _minGap > 0 ? GapCloser.Find(plan.Dcel, plan.Height, _minGap, _tol, _planTol) : new GapCloser.Found();
+            var found = _minGap > 0 ? GapCloser.Find(plan.Dcel, plan.Height, _minGap, _tol, _planTol, Options.FullGapScan) : new GapCloser.Found();
             foreach (var gap in found.Gaps)
             {
                 var pair = new[] { BlocksOf(plan, solidPlan, gap.FaceA), BlocksOf(plan, solidPlan, gap.FaceB) };
@@ -336,12 +339,17 @@ public sealed class HeightFieldUnion
                 if (res.SolidShell[s] < 0) res.SolidShell[s] = id;
         }
 
+        var built = new List<OutputShell>();
         for (var i = 0; i < builders.Count; i++)
         {
             var sh = builders[i].ToShell(_solids.Select((s, k) => (s, k)).Where(p => res.SolidShell[p.k] == i)
                 .Select(p => p.s.Block).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList());
-            res.Shells.Add(sh);
+            built.Add(sh);
         }
+        // Shell, vertex and triangle order from the geometry alone, not from the order of the input objects (D-047).
+        res.Shells.AddRange(CanonicalOrder.Apply(built, out var newIndex));
+        for (var s = 0; s < res.SolidShell.Length; s++)
+            if (res.SolidShell[s] >= 0) res.SolidShell[s] = newIndex[res.SolidShell[s]];
         return res;
     }
 

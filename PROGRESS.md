@@ -4,7 +4,20 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-_None open._
+- **Q-S2 (solver, 2026-11-22, not blocking v0.1):** two things in item A need your call.
+  1. **The guard "every `result.json` check keeps the same `value`" does not hold as written**, though geometry is
+     identical in all 1,241 outputs and every `pass` is unchanged. `value` changes in 120 cases for two reasons, both
+     on the checker's side: (a) in 117 cases, all multi-shell, several shells tie on `volume_m3` /
+     `footprintArea_m2` (usually all exact), and the checker reports a different one of them; the per-shell numbers
+     in `detail` are the same set. (b) In 3 cases the value differs in the 12th significant digit, because the
+     checker adds the same triangles in a different order. Details in D-047. Accept?
+  2. **Object order still changes the output in 4 of 930 unseen cases** (0 of 310 visible; two shuffles of every
+     case), by amounts far below the tolerances. In 3 cases, points of different objects within `weld` keep the one
+     met first (0.1–0.5 mm). In 1 case, a tie between equally good roof triangulations is broken by order. Fixing
+     the tie (start each roof outline at its lowest point) changes diagonals in 254 of 1,241 outputs, all still
+     passing. Fixing the weld choice changes positions below `weld` in some cases (not measured). Both change
+     geometry, so I did neither under the freeze. Do them for v0.1, or leave them for v0.2 (as written in
+     KNOWN_LIMITATIONS.md)?
 
 
 ## Current status
@@ -18,6 +31,61 @@ _None open._
 | M5 Package | In progress (under feature freeze): solver problems 1–3 merged; README, CI and demo not started | 311/311 | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · solver · M5: output order from geometry, no static test switch, README, KNOWN_LIMITATIONS
+- **A. Order independent of input order** (D-047). Shells, vertices and triangles are written in an order that
+  depends on the geometry only. Vertices are sorted by written position (X, Y, Z at 6 decimals), each triangle starts
+  at its smallest index, and shells are sorted by their sorted vertex lists (lowest ground corner first).
+  `solverVersion` 0.7.1.
+  - Test `Step10OrderTests` (7 tests): a synthetic district of 120 parts, on the axes and turned. Its objects in 4
+    shuffles; as one object (parts shuffled inside) and as one per part; with vertices renumbered and faces
+    reordered: byte-identical `repaired.obj` in every case. Without the change, 6 of the 7 fail.
+  - **Guard** (old vs new solver; 311 visible cases and 930 unseen from seeds 777, 2024 and 99991, generated with the
+    current generator):
+    - **all 1,241 `repaired.obj` changed bytes**; **0 changed geometry** (same shells, same oriented triangles by
+      written coordinates);
+    - every `result.json` check keeps its `pass`. `value` changed in 120 cases, all explained, none from geometry: a
+      different tied shell reported (139 checks in 117 cases), or 12th-digit rounding (3 checks). **Not literally
+      the guard as briefed, so I asked the owner (Q-S2.1).**
+  - Also measured: every case with its objects shuffled (2 shuffles, 2,480 runs) gives the same bytes except 4
+    unseen cases. These are sub-tolerance tie-breaks, left as they are under the freeze; see Q-S2.2 and
+    KNOWN_LIMITATIONS.md.
+- **B. No static switch** (D-048). `GapCloser.FullScan` removed. An internal `RepairOptions { FullGapScan }` is
+  passed from `MassingRepairer` (internal constructor) through `RepairPipeline.Run` to `HeightFieldUnion` and
+  `GapCloser.Find`. Public signatures are unchanged. The full-scan agreement test now uses its own options. Output
+  unchanged (validate below; the run is byte-identical to the guard run).
+- **C. README.md** rewritten around the problem statement. It now has:
+  - the CI badge (from the brief);
+  - before/after image slots with the exact paths;
+  - the 9 pipeline steps with D-numbers;
+  - the per-fault results table from `out/summary.json`, the unseen totals (930/930) and the owner's private results
+    copied from the M4 gate entry;
+  - the runtime;
+  - the quick start for bash and PowerShell;
+  - limitations and the v0.2 roadmap.
+  - Images and captions: `docs/images/showcase*.{svg,json}` exist on no branch yet (`gen/m5` has none). The paths
+    are in place; captions are placeholders until the generator's files are merged.
+  - **Quick start tested** in two fresh clones on Windows:
+    - Git Bash: `scripts/setup.sh`, `scripts/validate.sh` (GREEN), `check cases/_example/case_0007`;
+    - PowerShell: `setup.ps1`, `validate.ps1` (GREEN), `check`, `repair`, `generate`.
+    - All exit 0. Fixed one wrong example (`repair --out` takes the parent folder; output goes to
+      `<out>/<caseId>/`).
+  - **Not tested on Linux:** WSL Ubuntu here has no .NET SDK, and `gh` is not installed. The badge URL and the
+    GitHub API return "Not Found" (private repo or no run yet), so I could not confirm CI or the badge.
+  - Note: `setup.sh` / `setup.ps1` run `git init`, commit and tag when `.git` is not a directory. That is true in a
+    git worktree, where `.git` is a file, so do not run setup inside a worktree. Scripts are not mine; for the owner.
+- **Runtime** (Release, in-process, median of 7 runs after warm-up): 500 blocks 0.61 s on the axes and 0.79 s turned
+  (single runs 0.4–1.8 s); 2,020 parts about 3–3.5 s.
+- **D. KNOWN_LIMITATIONS.md: final pass.** Every entry has a D-number. Jog margins updated to the current cases
+  (visible 19 %, unseen 44.5 % of the footprint tolerance, all on `shortEdge` cases). Runtime updated. New entries:
+  output order and its two exceptions (D-047); gaps inside one part (inlets, narrow courtyards) not closed (D-032);
+  ground snap limits (D-049); a list of inputs that end `partial` (D-031, D-036, D-042, D-049); `runtime_ms` not
+  byte-identical (D-028). D-049 records the M3 choices for weld, cleanup, orientation, holes and ground snap.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2936/2936 (Geometry 88, Cli 31, Generator 2636, Checker 98,
+  Repair 83) · cases 311/311 · locks OK · **VALIDATE: GREEN**. Unseen seeds 777, 2024, 99991: 310/310 each.
+- Next: Q-S2. After the generator's and checker's M5 branches are merged: merge `main`, fill in the image captions
+  from `showcase.json`, check the images render and the badge, run validate, commit.
+- Blockers: none (Q-S2 does not block).
 
 ### 2026-11-22 · owner · M4 gate: approved, feature freeze
 - **M4 criteria met** (MILESTONES.md): gap closing below `minGap`, sliver and short-edge removal, combined-fault
