@@ -13,11 +13,43 @@ _None open._
 | --- | --- | --- | --- |
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
-| M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
-| M4 Hard faults | ✅ Criteria met; R1 and Q-S1 merged. Feature-freeze gate: waits for a new private hidden set and the owner benchmarks on `main` | 311/311 (roofStep 29/29; hidden 290/290 on the old set) | 2026-11-22 |
-| M5 Package | In progress: solver problems 1–3 merged; README, CI and demo not started | 311/311 | 2026-11-22 |
+| M3 Core repair | ✅ Passed (midpoint review folded into the M4 gate review) | 252/291 at M3 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-22 |
+| M4 Hard faults | ✅ Passed (gate approved, feature freeze) | 311/311 visible · private hidden set 310/310 · owner benchmarks pass | 2026-11-22 |
+| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; README, CI and demo not started | 311/311 | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · owner · M4 gate: approved, feature freeze
+- **M4 criteria met** (MILESTONES.md): gap closing below `minGap`, sliver and short-edge removal, combined-fault
+  cases, randomised property tests (solver M4 steps 1–4). Target ≥ 80 % with every failure explained: 311/311
+  visible, no failures to explain.
+- **Evidence at the gate** (`main` @ `1515fc0`, owner-run; the private material is not shared, totals only):
+  - validate: tests 2929/2929, cases 311/311, locks OK.
+  - **New private hidden set** (new private seed; generator with `roofStep`; old hidden set retired because its
+    details were discussed in the open): **310/310 pass**, all `repaired`. Worst tolerance use: volume 6.6 %,
+    footprint 11.7 %, height 6.2 %. An independent geometry check finds every shell valid. Two runs are
+    byte-identical. Runtime median 4 ms, max 196 ms per case.
+  - **Owner benchmarks** (geometry not made by the generator): cases with exact answers all pass with zero error. A
+    real district is valid and deterministic, takes about 2 s, and every change is explained by the gap-closing and
+    short-edge rules. Out-of-scope probes (an overhang, a sloped roof) come back `partial` with located warnings,
+    as KNOWN_LIMITATIONS.md says.
+- **Feature freeze, from now until v0.1 ships (M5):**
+  - Allowed: packaging (README with results table, CI, demo), documentation, bug fixes, and the two minor solver
+    items (shell order still depends on the object split on real data; the static `GapCloser.FullScan` test
+    switch).
+  - Not allowed without the owner: new repair features, new faults, new checks, new `report.json` ops, or
+    tolerance changes.
+  - v0.2 backlog:
+    - sloped roofs (still a height field: piecewise planar roofs);
+    - overhangs and canopies (needs a 3D union);
+    - minimum-angle grading and refinement (D-025, D-035);
+    - a validity-only grading mode for real data without `expected.json`.
+- M3 midpoint review is folded into this review (status row updated).
+- Locks unchanged: `lock-v0.1` stays at `5c5c7a6` (AGREEMENT.md, LOCKS, `cases/`, checker).
+- validate (`scripts/validate.ps1`, on this commit): build ✅ · tests 2929/2929 (Geometry 88, Cli 31,
+  Generator 2636, Checker 98, Repair 76) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Next: M5 (README, CI, demo; minor solver items).
+- Blockers: none.
 
 ### 2026-11-22 · owner · Solver M5 problems 1–3 merged; all three branches in `main`
 - `solve/m5` merged: `main` merged into it first (conflicts in PROGRESS.md and DECISIONS.md were additions on both
