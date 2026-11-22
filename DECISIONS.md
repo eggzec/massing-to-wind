@@ -13,6 +13,17 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-055 · 2026-11-22 · owner · Banner and icon in the eggzec house style, SVG as the source
+- Context: the repository moved to the `eggzec` organisation, whose repositories open with a 2400 × 800 pixel-art
+  banner in `docs/assets/<name>-banner.png` and keep a matching `<name>-icon.{svg,png}`.
+- Choice: the same layout and file names. The SVGs are the source; the PNGs were rendered from them once with a
+  headless browser. The banner is referenced by a relative path, so it shows while the repository is private too.
+- Alternatives: an absolute `raw.githubusercontent.com` URL like the Python repositories (needed there for PyPI,
+  breaks on a private repository); no banner.
+- Why: match the organisation; no tool outside .NET is added to the build, tests or CI (the drawing script stayed
+  outside the repository).
+- Revisit if: the banner needs changing: edit the SVG and re-render the PNG.
+
 ## D-054 · 2026-11-22 · owner · MIT licence before going public
 - Context: the repository is about to become public; without a licence nobody may legally use or copy the code.
 - Choice: MIT (`LICENSE`, `PackageLicenseExpression` in `Directory.Build.props`, a section in `README.md`).

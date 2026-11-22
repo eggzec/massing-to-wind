@@ -1,8 +1,20 @@
+![Massing-to-Wind](docs/assets/massing-to-wind-banner.png)
+
 # Massing-to-Wind
 
-![ci](https://github.com/eggzec/massing-to-wind/actions/workflows/ci.yml/badge.svg)
+**Automatic repair of generative-design building massings into simulation-ready geometry for wind (CFD) analysis**
 
-**Automatic repair of generative-design building massings into simulation-ready geometry, in pure C#.**
+[![CI](https://github.com/eggzec/massing-to-wind/actions/workflows/ci.yml/badge.svg)](https://github.com/eggzec/massing-to-wind/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/tag/eggzec/massing-to-wind?sort=semver&label=release)](https://github.com/eggzec/massing-to-wind/tags)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
+
+`m2w` is a pure C# (.NET 8) engine that repairs the building massings produced by generative design tools —
+stacked floor boxes, overlapping blocks, tiny gaps, slivers, open or flipped surfaces, floating blocks, map
+coordinates — into closed, non-intersecting shells that wind (CFD) meshers accept. It reads OBJ and writes the
+repaired OBJ plus a report of every change it made. An independent checker grades the output: 311/311 visible cases
+and 930/930 unseen cases pass, and the output is byte-identical on Linux and Windows.
 
 ## The problem
 
@@ -204,4 +216,4 @@ these files to use the engine; see Quick start.
 
 ## License
 
-[MIT](LICENSE) © 2026 Saif ur Rehman.
+MIT — see [LICENSE](LICENSE).

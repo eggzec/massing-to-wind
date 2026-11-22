@@ -20,6 +20,14 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-22 · owner · README header in the eggzec house style; banner and icon
+- `docs/assets/`: `massing-to-wind-banner.{svg,png}` (2400 × 800) and `massing-to-wind-icon.{svg,png}`
+  (1024 × 1024), pixel art like the other eggzec repositories: two gusts of wind over a skyline, the name in pixel
+  letters, tagline "geometry repair for wind" (D-055).
+- `README.md` header now follows the eggzec repositories (e.g. `pyswarm`): banner, title, bold tagline, badge rows
+  (CI, release; licence, .NET 8), a one-paragraph intro. License line reads "MIT — see LICENSE".
+- validate: **GREEN**, 311/311 (`out/summary.json`); locks OK.
+
 ### 2026-11-22 · owner · Repository moved to the `eggzec` organisation; links updated
 - The repository moved from `rehman-saif/massing-to-wind` to `eggzec/massing-to-wind`. The local `origin` remote
   was updated by the owner.
