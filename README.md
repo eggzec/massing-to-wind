@@ -75,7 +75,7 @@ a silent success.
 
 ## Results
 
-**Visible cases** (`cases/`, from `out/summary.json` after `scripts/validate.ps1` on this branch): **311/311 pass**.
+**Visible cases** (`cases/`, from `out/summary.json` after `scripts/validate.ps1` on `main`): **311/311 pass**.
 A combined case counts once under each of its faults.
 
 | Fault | Passed / total |
@@ -100,6 +100,9 @@ outside the repository; the solver never saw these cases while it was being writ
 (310/310 per seed).
 
 **Owner's private results** (run by the owner; the material is not shared):
+_The hidden set stays private on purpose: its cases and seed were never seen by the repair engine while it was
+being written, so it measures overfitting to the visible cases. Publishing it would end that. The benchmark
+geometry is third-party material and is not ours to share. Only totals are reported._
 - Private hidden set: **310/310 pass**. Worst tolerance use: volume 6.6 %, footprint 11.7 %, height 6.2 %.
 - Owner benchmarks on geometry the generator did not make: the cases with exact answers all pass with zero
   error. A real district comes out valid in about 2 s.
@@ -178,3 +181,27 @@ Details, with D-numbers, are in [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
 2. Rhino/Grasshopper component wrapping the engine.
 3. Batch repair of many options on AWS (Amazon Web Services): one case per job.
 4. Fast wind-comfort surrogate model trained on the repaired, simulated options.
+
+## How this was built
+
+v0.1 was built in five days (2026-11-18 to 2026-11-22) by three AI coding agents (Claude Code), each with its own role, branch and folder,
+overseen by a human owner who set direction, answered questions and held the milestone gates. The working files
+are kept in the repository on purpose, as a record of how the project was run:
+
+| File | What it is |
+| --- | --- |
+| [`AGREEMENT.md`](AGREEMENT.md) | The contract between the agents: file formats, faults, tolerances, grading. Locked. |
+| [`CLAUDE.md`](CLAUDE.md), [`.claude/agents/`](.claude/agents/) | Rules every agent follows, and one brief per role: generator, checker, solver. |
+| [`MILESTONES.md`](MILESTONES.md) | The plan, with acceptance criteria and a gate per milestone. |
+| [`PROGRESS.md`](PROGRESS.md) | The day-by-day log of every session, with pass counts. |
+| [`DECISIONS.md`](DECISIONS.md) | Every design choice someone could question (the D-numbers cited above). |
+| [`OWNER_GUIDE.md`](OWNER_GUIDE.md) | How the owner ran the agents, gates and hidden cases. |
+| [`docs/HANDOFF-v0.2.md`](docs/HANDOFF-v0.2.md) | Where v0.2 starts. |
+
+The key rule is separation: the solver reads only `input.obj` and `case.json`, never the expected answers or the
+generator and checker code; `scripts/check-locks.sh` fails if an agent edits a locked path. You don't need any of
+these files to use the engine; see Quick start.
+
+## License
+
+[MIT](LICENSE) © 2026 Saif ur Rehman.

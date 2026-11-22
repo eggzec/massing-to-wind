@@ -7,5 +7,9 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <Authors>Saif ur Rehman</Authors>
+    <Copyright>Copyright (c) 2026 Saif ur Rehman</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/rehman-saif/massing-to-wind</RepositoryUrl>
   </PropertyGroup>
 </Project>

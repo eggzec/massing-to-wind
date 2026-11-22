@@ -1,13 +1,19 @@
 # Owner guide — how to oversee this project in about 30 minutes a day
 
+> This is the guide the human owner followed to run the three agents through v0.1 (see "How this was built" in
+> `README.md`). To build and use the engine you need none of it: see Quick start in `README.md`. The day numbers
+> below are the original one-week plan.
+
 You set direction, run gates and keep the loop honest. The agents make the technical decisions.
 
 ## One-time setup (Day 1, ~20 min)
 
-1. Install the .NET 8 SDK and Git. Unzip this folder.
-2. Run `scripts/setup.sh` (Windows: `scripts/setup.ps1`). It creates the solution, the first commit, the
-   `lock-v0.1` tag and three branches: `gen/m2`, `check/m2`, `solve/m3`.
-3. Create a GitHub repository and push `main`, the branches and the tag (`git push --all && git push --tags`).
+1. Install the .NET 8 SDK and Git, and get the source (clone the repository).
+2. Run `scripts/setup.sh` (Windows: `scripts/setup.ps1`). It adds every project to the solution and builds.
+   Run from a plain folder that is not yet a git repository (how v0.1 started), it also makes the first commit, the
+   `lock-v0.1` tag and three branches: `gen/m2`, `check/m2`, `solve/m3`. In a clone it leaves git as it is.
+3. Starting from a plain folder only: create a GitHub repository and push `main`, the branches and the tag
+   (`git push --all && git push --tags`).
 4. Make a private `hidden/` folder **outside** the repository for your own test cases (see "Hidden cases").
 
 ## How to run the agents

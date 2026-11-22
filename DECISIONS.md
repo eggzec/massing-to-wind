@@ -13,6 +13,14 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-054 · 2026-11-22 · owner · MIT licence before going public
+- Context: the repository is about to become public; without a licence nobody may legally use or copy the code.
+- Choice: MIT (`LICENSE`, `PackageLicenseExpression` in `Directory.Build.props`, a section in `README.md`).
+- Alternatives: Apache-2.0 (explicit patent grant, longer notice terms); no licence (visible but unusable).
+- Why: owner's choice; short and permissive, and compatible with every package used (xunit Apache-2.0, FsCheck
+  BSD-3, Microsoft.NET.Test.Sdk MIT, all test-only).
+- Revisit if: a contributor or employer needs a patent grant (then Apache-2.0).
+
 ## D-053 · 2026-11-22 · owner (M5) · Demo runner in `demo/`, with ParaView as the 3D viewer (owner tooling)
 - Context: M5 asks for a short demo that the owner records. The owner chose ParaView as the viewer for now; Rhino
   comes later.

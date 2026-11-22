@@ -20,6 +20,25 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-22 · owner · Pre-public audit and cleanup (branch `chore/pre-public-cleanup`)
+- **Audit** of the working tree and the full history (all branches and tags) before the repository goes public:
+  - no credentials, tokens, keys or passwords; no local machine paths; no file ever committed and later removed;
+    largest blob 411 KB (`cases/index.json`);
+  - seeds named anywhere in history: 777, 2024, 99991 (published unseen sets), 90001 (retired hidden set), and
+    20261122/20261123 (test seeds). The current private hidden seed is not in the repository;
+  - CI has read-only permissions, actions pinned to commit SHAs, and uses no secrets;
+  - commit author email: owner decided to leave it as it is (no history rewrite).
+- **Changes:**
+  - `LICENSE` (MIT) added; licence, authors, copyright and repository URL in `Directory.Build.props` (D-054);
+  - `README.md`: "on this branch" changed to "on `main`"; one line on why the hidden set and benchmarks stay
+    private; new sections "How this was built" (the agent working files and what each is) and "License";
+  - `OWNER_GUIDE.md`: a note that it is the owner's v0.1 guide, not needed to use the engine; setup steps no
+    longer say "unzip" and say what `setup` does in a clone versus a plain folder;
+  - removed an empty, untracked `~/.claude` folder from the repository root.
+- **Left for the owner:** delete the merged remote branches `solve/m3` and `solve/m4`; GitHub description, topics
+  and branch protection; then switch the repository to public.
+- validate: **GREEN**, 311/311 (`out/summary.json`); tests 2,953/2,953; locks OK. No locked path touched.
+
 ### 2026-11-22 · owner · v0.1 closed (tag `v0.1.0`); v0.2 plan drafted; handoff written; `setup.sh` worktree trap fixed
 - **`scripts/setup.sh` fix** (bug found by the solver in M5, open since).
   - The problem: the first-time git step tested `[ ! -d .git ]`. In a git worktree `.git` is a file, so setup
