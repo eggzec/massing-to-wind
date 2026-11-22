@@ -15,7 +15,7 @@ _None open._
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Passed (midpoint review folded into the M4 gate review) | 252/291 at M3 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-22 |
 | M4 Hard faults | ✅ Passed (gate approved, feature freeze) | 311/311 visible · private hidden set 310/310 · owner benchmarks pass | 2026-11-22 |
-| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; `m2w render` + showcase images and CI (Linux, Windows, determinism, cross-OS) merged; `solve/m5` (output order, options object, README) reviewed, not merged; first CI run and demo pending | 311/311 | 2026-11-22 |
+| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; `m2w render` + showcase images and CI (Linux, Windows, determinism, cross-OS) merged; CI green on GitHub (Linux, Windows, cross-OS identical; D-051); `solve/m5` (output order, options object, README) reviewed, not merged; demo pending | 311/311 | 2026-11-22 |
 
 ## Log (newest first)
 
@@ -28,8 +28,15 @@ _None open._
 - Fix (D-051): new `global.json`, SDK `8.0.400`, `rollForward: latestFeature`. No code change, no locked path.
   Checked every `.Reverse()`: two more array calls (`RenderTests.cs:37`, `Step1CleanupTests.cs:144`) would have
   failed to compile next; the statement-form calls are all on `List<T>`, so no output changed silently.
-- Not known yet: everything after the build (tests, validate, determinism, the Linux/Windows hash comparison) has
-  never run on GitHub. Result of the next run below or in the next entry.
+- **First green CI run: `45016451179`** (commit `283cde1`), checked with `gh` against the checker's checklist:
+  - `validate (ubuntu-latest)` 2m05s and `validate (windows-latest)` 3m10s: tests 2946/2946, `locks: OK`,
+    `"casesPassed": 311`, `VALIDATE: GREEN`, `determinism: OK — 934 files identical`, `wrote out/hashes.txt (311 cases)`;
+  - `cross-OS determinism`: `cross-os: OK, 311 cases, repaired.obj byte-identical on Linux and Windows`;
+  - artifacts `hashes-Linux` and `hashes-Windows` downloaded: both identical to the local Windows `out/hashes.txt`
+    (SHA-256 `fdb5d2e4…`), so local, Linux CI and Windows CI produce the same 311 `repaired.obj`. D-009 now holds
+    as a CI gate.
+  - Only annotation: xUnit2013 warning (`Assert.Equal` on a collection size) at
+    `tests/M2W.Repair.Tests/Step9WarningLocationTests.cs:102`; a warning, for the solver some time.
 - validate (`scripts/validate.ps1`, SDK 8.0.428 via `global.json`): build ✅ · tests 2946/2946 (Geometry 88, Cli 48,
   Generator 2636, Checker 98, Repair 76) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
 - Blockers: none.
