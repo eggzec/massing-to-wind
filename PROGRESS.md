@@ -4,29 +4,7 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-### Q-S1 · 2026-11-19 · solver · Checker misses an anchor that lies on an edge shared by two bottom triangles
-- **What happens:** `case_0284` (farCoordinates only). The solver writes the input box unchanged except for the origin
-  shift: footprint 67.4 × 14.9 = 1004.26 m², volume 14,561.77 m³, every topology check passes. `volume_m3`,
-  `footprintArea_m2` and `maxHeight_m` still fail with "no repaired shell left that contains its anchor (28.6, 56.25)".
-  The anchor is the rectangle's centre. Both diagonals of a rectangle pass through its centre, so whichever way the
-  bottom quad is split into two triangles, the anchor lies on their shared edge.
-- **Reproduction (scratch copy, nothing in the repo changed):** the same box with one extra vertex at the middle of a
-  long edge, so that no triangle edge runs through the centre, passes all three checks (`m2w check` on a copy of
-  `out/case_0284` with only `repaired.obj` edited).
-- **Effect:** 1 case at M3 step 1 (3 had an anchor-containment failure, 2 of them also for other reasons). After M3
-  step 4 it is **0 cases**: the rebuilt shells happen not to put a triangle edge through any anchor. The defect is
-  still there and will hit any output whose bottom triangulation runs an edge through an anchor (hidden cases too).
-- **Suggested fix (checker, locked, so owner's call):** treat a point on the boundary of a bottom triangle as inside
-  (or test containment against the bottom face as a polygon, not triangle by triangle).
-- **Solver meanwhile:** I am *not* choosing triangulations to dodge anchor positions; that would be tuning output to
-  the grader. Failures caused by this are listed as such in each PROGRESS entry.
-- **Owner answer (2026-11-21): approved.** Confirmed in review: `Shell.ContainsInPlan`
-  (`src/M2W.Checker/Shell.cs:82`) already counts edges as inside (`u >= 0 && v >= 0 && w >= 0`), but for an anchor
-  exactly on a diagonal, rounding makes one weight about −1e-17 in both triangles. Fix: accept weights `>= -1e-9`.
-  Checker agent implements it (see the 2026-11-21 owner entry in the log). Delete this item once the fix is merged and
-  re-locked.
-- **Status (2026-11-22, checker): fixed on `check/m4-qs1`, awaiting owner merge.** See D-039 and the 2026-11-22
-  checker entry in the log.
+_None open._
 
 
 ## Current status
@@ -40,6 +18,22 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-22 · owner · Checker Q-S1 merged; Q-S1 closed; lock moved
+- `check/m4-qs1` merged: `main` merged into it first (conflicts in PROGRESS.md and DECISIONS.md were additions on
+  both sides; kept both, newest first), the checker's decision renumbered **D-038 → D-039** (the generator's R1
+  entry keeps D-038; references in `Shell.cs` and `AnchorContainmentTests.cs` comments updated), then
+  fast-forwarded into `main` (`a469c64`).
+- Checker task 5 (re-run on the regenerated cases), done by the owner at the merge: tests 2915/2915 incl. Checker
+  98 and the clean-control zero-repair test · cases 311/311. All 311 `result.json` are byte-identical with and
+  without the Q-S1 fix (same solver), so the fix changes no grade on the new cases either.
+- **Q-S1 closed** and removed from "Waiting for owner".
+- `lock-v0.1` moved to this commit (locked paths changed: `src/M2W.Checker/Shell.cs`,
+  `tests/M2W.Checker.Tests/AnchorContainmentTests.cs`; approved for Q-S1).
+- Next: solver (merge `main` into `solve/m5`, renumber its D-038–D-040 to D-040–D-042, `roofStep` results).
+- validate (`scripts/validate.ps1`, after the commit and the tag move): build ✅ · tests 2915/2915 (Geometry 88,
+  Cli 31, Generator 2636, Checker 98, Repair 62) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
 
 ### 2026-11-22 · owner · Approvals Q-G1 and `fillUnsupported`; generator R1 merged; lock moved
 - Owner approvals (orchestrator review of all three branches, see below):
