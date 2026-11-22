@@ -13,6 +13,28 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-053 · 2026-11-22 · owner (M5) · Demo runner in `demo/`, with ParaView as the 3D viewer (owner tooling)
+- Context: M5 asks for a short demo that the owner records. The owner chose ParaView as the viewer for now; Rhino
+  comes later.
+- Choice: `demo/run-demo.ps1` runs six steps with a pause before each. Steps: the problem, repair, independent
+  check, before/after, every visible case, CI. Default case `case_0191` (owner's choice): the hardest visible case,
+  four faults, five kinds of repair, and the only one with a real share of a tolerance used (footprint 19 %).
+  - It writes only under `out/demo`. Switches: `-Case`, `-Step`, `-NoPause`, `-NoParaView`, `-NoBrowser`.
+  - Step 3 shows volume, footprint and height as repaired / expected / tolerance / share used, taken from the
+    check's `detail`, because the check's `limit` is the expected value there.
+  - `demo/paraview_scene.py` runs in ParaView's own Python (`pvbatch`). ParaView's OBJ reader ignores `o` lines,
+    so the script reads the OBJ itself. It marks defects with the same rules as `m2w render` (D-043): weld 5 mm,
+    free edges per object in red, flipped faces in magenta. It writes legacy VTK, `scene.pvsm` and `scene.png`, and
+    the runner opens ParaView with the two views' cameras linked.
+- Non-.NET tools: ParaView (and its Python) and, optionally, the GitHub CLI, approved by the owner for the demo only.
+  Neither is used by the build, the tests, validate or CI; without ParaView, step 4 falls back to the `m2w render`
+  SVGs.
+- Alternatives: SVG images only (no orbit view); a VTK export command in `m2w` (new public CLI surface under the
+  freeze, for a viewer choice that may change); ParaView's OBJ reader with `g` lines added (no defect markers).
+- Why: the owner can record the demo in one pass with the same output every take, and ParaView shows the real
+  geometry in 3D.
+- Revisit if: Rhino is integrated (then a Rhino scene instead of or next to ParaView).
+
 ## D-051 · 2026-11-22 · owner (M5) · `global.json` pins the .NET 8 SDK
 - Context: CI had never passed on GitHub. The runners have the .NET 10 SDK preinstalled; without `global.json`,
   `dotnet` picks the newest SDK, so CI compiled with C# 14 (`LangVersion` is `latest` in `Directory.Build.props`)

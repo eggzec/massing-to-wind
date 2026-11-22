@@ -19,6 +19,17 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-22 · owner · Demo runner (`demo/`, D-053)
+- New: `demo/run-demo.ps1` (six steps, pauses for recording) and `demo/paraview_scene.py` (ParaView scene: input and
+  repaired side by side, linked cameras, free edges red, flipped faces magenta). Default case `case_0191`.
+  Owner tooling only: not in the build, tests, validate or CI.
+- Run: `powershell -ExecutionPolicy Bypass -File demo\run-demo.ps1` (`-Case`, `-Step`, `-NoPause`, `-NoParaView`,
+  `-NoBrowser`). Writes only under `out/demo`.
+- Rehearsed straight through (`-NoPause -NoParaView -NoBrowser`): all six steps, exit 0. ParaView scenes checked by
+  eye on `case_0191`, `case_0301`, `case_0105`, `case_0183` and `case_0337` (framing fixed for tall cases).
+- Next: owner runs the demo, notes issues, then records (M5 item "Short demo video or GIF").
+- Blockers: none.
+
 ### 2026-11-22 · owner · `solve/m5` merged; Q-S2 answered and closed; showcase images regenerated
 - **Q-S2 answered (owner):**
   - **Q-S2.1 accepted.** The `value` changes come from the checker reporting one of several tied shells, and from
