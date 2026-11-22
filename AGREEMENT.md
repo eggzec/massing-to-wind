@@ -186,4 +186,4 @@ massing-to-wind/
 - Generation is seeded: the same seed must produce identical files.
 - Readers ignore unknown JSON fields. A missing required field is an input error (exit 2).
 - `schemaVersion` changes from 0.1 to 0.2 for any breaking change to a file format.
-- Faults to cover in v0.1: `overlap`, `stackedFloors`, `touchingWalls`, `smallGap`, `sliver`, `shortEdge`, `duplicateVertices`, `openSurface`, `flippedFaces`, `floatingBlock`, `sunkBlock`, `farCoordinates`.
+- Faults to cover in v0.1: `overlap`, `stackedFloors`, `touchingWalls`, `smallGap`, `sliver`, `shortEdge`, `duplicateVertices`, `openSurface`, `flippedFaces`, `floatingBlock`, `sunkBlock`, `farCoordinates`, `roofStep` (roof steps below and above `minEdge`; see "Roof steps below `minEdge`").

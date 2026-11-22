@@ -1,83 +1,61 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0343",
-  "seed": 1100383978,
+  "seed": 1345552344,
   "faultsInjected": [
-    "sliver",
-    "floatingBlock",
-    "farCoordinates"
+    "overlap"
   ],
   "expected": {
-    "shellCount": 4,
+    "shellCount": 3,
     "shells": [
       {
-        "volume_m3": 58261.185,
-        "footprintArea_m2": 562.91,
-        "maxHeight_m": 103.5,
-        "genus": 0,
+        "volume_m3": 30665.28,
+        "footprintArea_m2": 1202.56,
+        "maxHeight_m": 25.5,
+        "genus": 1,
         "blocks": [
           "B04"
         ],
         "anchor_m": [
-          43.75,
-          -12.65
+          75.25,
+          30.05
         ]
       },
       {
-        "volume_m3": 19338.668,
-        "footprintArea_m2": 289,
-        "maxHeight_m": 71.3,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          1.569,
-          -45.504
-        ]
-      },
-      {
-        "volume_m3": 13976.39,
-        "footprintArea_m2": 488.63,
-        "maxHeight_m": 29.8,
+        "volume_m3": 15572.784,
+        "footprintArea_m2": 268.96,
+        "maxHeight_m": 57.9,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          36.012,
-          11.808
+          48.2,
+          30.05
         ]
       },
       {
-        "volume_m3": 6890.508,
-        "footprintArea_m2": 638.01,
-        "maxHeight_m": 10.8,
+        "volume_m3": 12512.64,
+        "footprintArea_m2": 515.2,
+        "maxHeight_m": 25.2,
         "genus": 0,
         "blocks": [
+          "B02",
           "B03"
         ],
         "anchor_m": [
-          33.577,
-          -37.065
+          14.3,
+          37.85
         ]
       }
     ],
-    "mustMerge": [],
-    "mustStaySeparate": [
-      [
-        "B01",
-        "B04"
-      ],
+    "mustMerge": [
       [
         "B02",
         "B03"
-      ],
-      [
-        "B03",
-        "B04"
       ]
-    ]
+    ],
+    "mustStaySeparate": []
   },
   "checks": {
     "watertight": true,

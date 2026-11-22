@@ -1,63 +1,63 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0313",
-  "seed": 355362690,
+  "seed": 1797167018,
   "faultsInjected": [
-    "sunkBlock"
+    "flippedFaces"
   ],
   "expected": {
     "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 25011.84,
-        "footprintArea_m2": 1116.6,
-        "maxHeight_m": 22.4,
+        "volume_m3": 35895.692,
+        "footprintArea_m2": 1463.26,
+        "maxHeight_m": 26.6,
         "genus": 1,
-        "blocks": [
-          "B04"
-        ],
-        "anchor_m": [
-          15.223,
-          63.313
-        ]
-      },
-      {
-        "volume_m3": 23509.494,
-        "footprintArea_m2": 758.74,
-        "maxHeight_m": 33.9,
-        "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          -3.459,
-          112.973
+          121.294,
+          0.041
         ]
       },
       {
-        "volume_m3": 20084.16,
-        "footprintArea_m2": 948,
-        "maxHeight_m": 54,
+        "volume_m3": 17528.268,
+        "footprintArea_m2": 1024.3,
+        "maxHeight_m": 18.6,
         "genus": 0,
         "blocks": [
-          "B02"
+          "B04"
         ],
         "anchor_m": [
-          88.472,
-          144.345
+          252.385,
+          34.055
         ]
       },
       {
-        "volume_m3": 12380.67,
-        "footprintArea_m2": 1375.63,
-        "maxHeight_m": 9,
+        "volume_m3": 13522.32,
+        "footprintArea_m2": 1207.35,
+        "maxHeight_m": 11.2,
         "genus": 1,
         "blocks": [
           "B03"
         ],
         "anchor_m": [
-          47.815,
-          87.016
+          64.436,
+          16.67
+        ]
+      },
+      {
+        "volume_m3": 9489.96,
+        "footprintArea_m2": 1054.44,
+        "maxHeight_m": 9,
+        "genus": 1,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          202.975,
+          39.76
         ]
       }
     ],
@@ -68,7 +68,7 @@
         "B03"
       ],
       [
-        "B03",
+        "B02",
         "B04"
       ]
     ]

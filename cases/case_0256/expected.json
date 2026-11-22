@@ -1,55 +1,79 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0256",
-  "seed": 326962555,
-  "faultsInjected": [
-    "stackedFloors"
-  ],
+  "seed": 735380142,
+  "faultsInjected": [],
   "expected": {
-    "shellCount": 3,
+    "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 57721.6,
-        "footprintArea_m2": 622,
-        "maxHeight_m": 92.8,
+        "volume_m3": 36493.765,
+        "footprintArea_m2": 481.69,
+        "maxHeight_m": 80.5,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          48.25,
-          5.792
+          54.928,
+          80.123
         ]
       },
       {
-        "volume_m3": 34196.58,
-        "footprintArea_m2": 1036.26,
-        "maxHeight_m": 33,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          78.971,
-          -19.747
-        ]
-      },
-      {
-        "volume_m3": 21936.64,
-        "footprintArea_m2": 884.64,
-        "maxHeight_m": 25.6,
+        "volume_m3": 30946.415,
+        "footprintArea_m2": 871.73,
+        "maxHeight_m": 35.5,
         "genus": 0,
         "blocks": [
           "B03"
         ],
         "anchor_m": [
-          53.772,
-          52.244
+          10.95,
+          75.924
+        ]
+      },
+      {
+        "volume_m3": 28478.09,
+        "footprintArea_m2": 1086.95,
+        "maxHeight_m": 26.2,
+        "genus": 1,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          10.466,
+          47.628
+        ]
+      },
+      {
+        "volume_m3": 17067.643,
+        "footprintArea_m2": 869.65,
+        "maxHeight_m": 20.5,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          100.515,
+          67.291
         ]
       }
     ],
     "mustMerge": [],
-    "mustStaySeparate": []
+    "mustStaySeparate": [
+      [
+        "B01",
+        "B03"
+      ],
+      [
+        "B01",
+        "B04"
+      ],
+      [
+        "B02",
+        "B03"
+      ]
+    ]
   },
   "checks": {
     "watertight": true,

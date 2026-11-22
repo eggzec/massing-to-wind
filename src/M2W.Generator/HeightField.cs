@@ -64,6 +64,147 @@ public sealed class HeightField
         return new HeightField(xs, ys, top, owners, blocks);
     }
 
+    /// <summary>Order in which <see cref="FlushRoofSteps"/> raises regions. The agreement does not say; the generator
+    /// computes all three and rejects a layout whose answer depends on the order (D-038).</summary>
+    public enum FlushOrder
+    {
+        /// <summary>Every region that can be raised is raised in the same round, then regions are rebuilt.</summary>
+        Simultaneous,
+
+        /// <summary>One region per round: the lowest one that can be raised.</summary>
+        LowestFirst,
+
+        /// <summary>One region per round: the highest one that can be raised.</summary>
+        HighestFirst,
+    }
+
+    /// <summary>True if two touching roofs differ by a step that the roof-step rule removes: more than 0 and less than
+    /// <paramref name="minEdge"/>. Heights are rounded to 1e-6 m, so the 1e-9 margins only absorb subtraction error.</summary>
+    public static bool IsFlushStep(double diff, double minEdge) => diff > 1e-9 && diff < minEdge - 1e-9;
+
+    /// <summary>
+    /// AGREEMENT.md "Roof steps below minEdge" (D-037): roof regions are maximal edge-connected sets of cells with the
+    /// same roof height. Two regions touch if any of their cells share an edge or a corner in plan. A region is raised
+    /// to the highest region it touches whose roof is higher by more than 0 and less than <paramref name="minEdge"/>;
+    /// this repeats (regions are rebuilt after every round) until no such step remains. Footprints, shells and holes do
+    /// not change; heights only go up, and only to heights that already exist, so the maximum height is kept.
+    /// </summary>
+    public HeightField FlushRoofSteps(double minEdge, FlushOrder order = FlushOrder.Simultaneous)
+    {
+        var top = (double[,])Top.Clone();
+        for (var round = 0; ; round++)
+        {
+            if (round > 100_000) throw new InvalidOperationException("Roof flush did not settle.");
+            var (id, h) = RoofRegions(top);
+            var target = h.ToArray();
+            foreach (var (a, b) in TouchingRegions(id))
+            {
+                if (IsFlushStep(h[b] - h[a], minEdge)) target[a] = Math.Max(target[a], h[b]);
+                if (IsFlushStep(h[a] - h[b], minEdge)) target[b] = Math.Max(target[b], h[a]);
+            }
+            var raise = Enumerable.Range(0, h.Count).Where(k => target[k] > h[k]).ToList();
+            if (raise.Count == 0) break;
+            if (order == FlushOrder.LowestFirst) raise = new List<int> { raise.OrderBy(k => h[k]).ThenBy(k => k).First() };
+            if (order == FlushOrder.HighestFirst) raise = new List<int> { raise.OrderByDescending(k => h[k]).ThenBy(k => k).First() };
+            var set = new HashSet<int>(raise);
+            for (var i = 0; i < Nx; i++)
+                for (var j = 0; j < Ny; j++)
+                    if (id[i, j] >= 0 && set.Contains(id[i, j])) top[i, j] = target[id[i, j]];
+        }
+        return new HeightField(Xs, Ys, top, Owners, Blocks);
+    }
+
+    /// <summary>True if both fields have the same roof height in every cell (same grid assumed).</summary>
+    public bool SameRoofs(HeightField other)
+    {
+        if (other.Nx != Nx || other.Ny != Ny) return false;
+        for (var i = 0; i < Nx; i++)
+            for (var j = 0; j < Ny; j++)
+                if (Top[i, j] != other.Top[i, j]) return false;
+        return true;
+    }
+
+    /// <summary>Region id of every roofed cell (-1 for empty) and the height of each region.</summary>
+    private (int[,] Id, List<double> Height) RoofRegions(double[,] top)
+    {
+        var id = new int[Nx, Ny];
+        for (var i = 0; i < Nx; i++)
+            for (var j = 0; j < Ny; j++)
+                id[i, j] = -1;
+        var heights = new List<double>();
+        var stack = new Stack<(int, int)>();
+        for (var i = 0; i < Nx; i++)
+            for (var j = 0; j < Ny; j++)
+            {
+                if (top[i, j] <= 0 || id[i, j] >= 0) continue;
+                var n = heights.Count;
+                var z = top[i, j];
+                heights.Add(z);
+                id[i, j] = n;
+                stack.Push((i, j));
+                while (stack.Count > 0)
+                {
+                    var (a, b) = stack.Pop();
+                    foreach (var (c, d) in Neighbours(a, b))
+                        if (id[c, d] < 0 && top[c, d] == z)
+                        {
+                            id[c, d] = n;
+                            stack.Push((c, d));
+                        }
+                }
+            }
+        return (id, heights);
+    }
+
+    /// <summary>Pairs of different regions with cells that share an edge or a corner.</summary>
+    private SortedSet<(int, int)> TouchingRegions(int[,] id)
+    {
+        var pairs = new SortedSet<(int, int)>();
+        foreach (var (i, j, c, d) in TouchingCellPairs())
+        {
+            int a = id[i, j], b = id[c, d];
+            if (a < 0 || b < 0 || a == b) continue;
+            pairs.Add(a < b ? (a, b) : (b, a));
+        }
+        return pairs;
+    }
+
+    /// <summary>Every pair of cells that share an edge or a corner, each pair once.</summary>
+    private IEnumerable<(int I, int J, int C, int D)> TouchingCellPairs()
+    {
+        for (var i = 0; i < Nx; i++)
+            for (var j = 0; j < Ny; j++)
+            {
+                if (i + 1 < Nx) yield return (i, j, i + 1, j);
+                if (j + 1 < Ny) yield return (i, j, i, j + 1);
+                if (i + 1 < Nx && j + 1 < Ny) yield return (i, j, i + 1, j + 1);
+                if (i + 1 < Nx && j > 0) yield return (i, j, i + 1, j - 1);
+            }
+    }
+
+    /// <summary>The distinct height differences (rounded to 1e-6 m, all &gt; 0) between roofed cells that share an
+    /// edge or a corner.</summary>
+    public SortedSet<double> TouchingSteps()
+    {
+        var steps = new SortedSet<double>();
+        foreach (var (i, j, c, d) in TouchingCellPairs())
+        {
+            double a = Top[i, j], b = Top[c, d];
+            if (a <= 0 || b <= 0) continue;
+            var s = Math.Round(Math.Abs(a - b), 6);
+            if (s > 0) steps.Add(s);
+        }
+        return steps;
+    }
+
+    /// <summary>A touching roof step greater than 0 and less than <paramref name="minEdge"/>, or null if none.</summary>
+    public string? FindRoofStep(double minEdge)
+    {
+        foreach (var s in TouchingSteps())
+            if (IsFlushStep(s, minEdge)) return $"touching roofs differ by {s} m (< minEdge {minEdge})";
+        return null;
+    }
+
     public static double[] SortedUnique(IEnumerable<double> values)
     {
         var sorted = values.Select(v => Math.Round(v, 6)).Distinct().OrderBy(v => v).ToList();

@@ -6,7 +6,7 @@ using static M2W.Checker.Tests.Kit;
 namespace M2W.Checker.Tests;
 
 /// <summary>
-/// Q-S1 (D-038): an anchor exactly on an edge that two plan triangles share must count as inside, although rounding
+/// Q-S1 (D-039): an anchor exactly on an edge that two plan triangles share must count as inside, although rounding
 /// can give it a barycentric weight of about −1e-17 in both. A point clearly outside must still be outside.
 /// All meshes are built by hand.
 /// </summary>

@@ -3,9 +3,9 @@
   "caseId": "case_0218",
   "units": "m",
   "origin": [
-    424567.135,
-    417115.184,
-    64.28
+    0,
+    0,
+    0
   ],
   "tolerances": {
     "cellSize": 1,

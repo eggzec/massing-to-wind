@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "0.1",
+  "caseId": "case_0399",
+  "seed": 1707116360,
+  "faultsInjected": [
+    "flippedFaces"
+  ],
+  "expected": {
+    "shellCount": 3,
+    "shells": [
+      {
+        "volume_m3": 32815.692,
+        "footprintArea_m2": 601.02,
+        "maxHeight_m": 54.6,
+        "genus": 0,
+        "blocks": [
+          "B03"
+        ],
+        "anchor_m": [
+          97,
+          69.8
+        ]
+      },
+      {
+        "volume_m3": 15482.415,
+        "footprintArea_m2": 793.97,
+        "maxHeight_m": 19.5,
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          68.8,
+          53.4
+        ]
+      },
+      {
+        "volume_m3": 7205.118,
+        "footprintArea_m2": 522.11,
+        "maxHeight_m": 13.8,
+        "genus": 0,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          39.25,
+          45.25
+        ]
+      }
+    ],
+    "mustMerge": [],
+    "mustStaySeparate": [
+      [
+        "B01",
+        "B03"
+      ]
+    ]
+  },
+  "checks": {
+    "watertight": true,
+    "outwardNormals": true,
+    "noSelfIntersections": true,
+    "minGap_m": 1,
+    "minEdge_m": 0.25
+  },
+  "tolerances": {
+    "volumeRel": 0.01,
+    "areaRel": 0.01,
+    "height_m": 0.01
+  }
+}

@@ -1,63 +1,37 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0377",
-  "seed": 1958594169,
+  "seed": 499454425,
   "faultsInjected": [
     "smallGap"
   ],
   "expected": {
-    "shellCount": 4,
+    "shellCount": 2,
     "shells": [
       {
-        "volume_m3": 83452.264,
-        "footprintArea_m2": 789.52,
-        "maxHeight_m": 105.7,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          -66.222,
-          -51.348
-        ]
-      },
-      {
-        "volume_m3": 58503.744,
-        "footprintArea_m2": 973.44,
-        "maxHeight_m": 60.1,
-        "genus": 0,
-        "blocks": [
-          "B04"
-        ],
-        "anchor_m": [
-          -94.547,
-          -54.504
-        ]
-      },
-      {
-        "volume_m3": 43236.69,
-        "footprintArea_m2": 1754.46,
-        "maxHeight_m": 87.5,
+        "volume_m3": 20852.82,
+        "footprintArea_m2": 711.42,
+        "maxHeight_m": 31.4,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          -138.002,
-          -69.507
+          62.05,
+          48.5
         ]
       },
       {
-        "volume_m3": 7877.952,
-        "footprintArea_m2": 209.52,
-        "maxHeight_m": 37.6,
+        "volume_m3": 3687.552,
+        "footprintArea_m2": 279.36,
+        "maxHeight_m": 13.2,
         "genus": 0,
         "blocks": [
-          "B03"
+          "B02"
         ],
         "anchor_m": [
-          -63.67,
-          -74.256
+          66.25,
+          82.75
         ]
       }
     ],
@@ -65,19 +39,7 @@
     "mustStaySeparate": [
       [
         "B01",
-        "B04"
-      ],
-      [
-        "B02",
-        "B03"
-      ],
-      [
-        "B02",
-        "B04"
-      ],
-      [
-        "B03",
-        "B04"
+        "B02"
       ]
     ]
   },
@@ -85,7 +47,7 @@
     "watertight": true,
     "outwardNormals": true,
     "noSelfIntersections": true,
-    "minGap_m": 1.5,
+    "minGap_m": 0.5,
     "minEdge_m": 0.25
   },
   "tolerances": {

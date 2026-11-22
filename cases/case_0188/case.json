@@ -11,7 +11,7 @@
     "cellSize": 1,
     "minGap": 1,
     "minEdge": 0.25,
-    "weld": 0.005,
+    "weld": 0.001,
     "minAngleDeg": 5,
     "groundSnap": 0.5
   },

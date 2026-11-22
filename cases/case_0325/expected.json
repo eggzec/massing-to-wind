@@ -1,50 +1,63 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0325",
-  "seed": 581433059,
+  "seed": 103228488,
   "faultsInjected": [
-    "shortEdge"
+    "sunkBlock"
   ],
   "expected": {
-    "shellCount": 3,
+    "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 36282.152,
-        "footprintArea_m2": 1761.18,
-        "maxHeight_m": 55.8,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          -72.097,
-          47.24
-        ]
-      },
-      {
-        "volume_m3": 20427.66,
-        "footprintArea_m2": 619.02,
-        "maxHeight_m": 33,
-        "genus": 0,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          -43.993,
-          88.471
-        ]
-      },
-      {
-        "volume_m3": 13348.335,
-        "footprintArea_m2": 808.99,
-        "maxHeight_m": 16.5,
+        "volume_m3": 53508.864,
+        "footprintArea_m2": 924.16,
+        "maxHeight_m": 57.9,
         "genus": 0,
         "blocks": [
           "B03"
         ],
         "anchor_m": [
-          -79.914,
-          94.143
+          93.691,
+          -31.829
+        ]
+      },
+      {
+        "volume_m3": 44097.141,
+        "footprintArea_m2": 1007.4,
+        "maxHeight_m": 89.1,
+        "genus": 0,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          72.907,
+          -8.895
+        ]
+      },
+      {
+        "volume_m3": 38959.674,
+        "footprintArea_m2": 2541.5,
+        "maxHeight_m": 37.5,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          116.18,
+          -11.448
+        ]
+      },
+      {
+        "volume_m3": 10557.952,
+        "footprintArea_m2": 231.04,
+        "maxHeight_m": 54.4,
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          141.688,
+          -54.189
         ]
       }
     ],
@@ -52,7 +65,19 @@
     "mustStaySeparate": [
       [
         "B01",
-        "B02"
+        "B04"
+      ],
+      [
+        "B02",
+        "B03"
+      ],
+      [
+        "B02",
+        "B04"
+      ],
+      [
+        "B03",
+        "B04"
       ]
     ]
   },

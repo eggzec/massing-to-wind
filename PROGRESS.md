@@ -25,7 +25,7 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
   exactly on a diagonal, rounding makes one weight about −1e-17 in both triangles. Fix: accept weights `>= -1e-9`.
   Checker agent implements it (see the 2026-11-21 owner entry in the log). Delete this item once the fix is merged and
   re-locked.
-- **Status (2026-11-22, checker): fixed on `check/m4-qs1`, awaiting owner merge.** See D-038 and the 2026-11-22
+- **Status (2026-11-22, checker): fixed on `check/m4-qs1`, awaiting owner merge.** See D-039 and the 2026-11-22
   checker entry in the log.
 
 
@@ -41,11 +41,74 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 
 ## Log (newest first)
 
-### 2026-11-22 · checker · Q-S1: anchors on a shared triangle edge are contained (D-038)
+### 2026-11-22 · owner · Approvals Q-G1 and `fillUnsupported`; generator R1 merged; lock moved
+- Owner approvals (orchestrator review of all three branches, see below):
+  - **Q-G1 approved and done:** AGREEMENT.md lists `roofStep` as the 13th fault ("Faults to cover in v0.1").
+    Additive; `schemaVersion` stays 0.1. Q-G1 removed from "Waiting for owner".
+  - **`fillUnsupported` approved** (solver D-040 on `solve/m5`): a new op name in `report.json` for regions filled
+    down to the ground, with `count`, `area_m2`, `bbox_m`, `regions[]`. Additive; existing ops unchanged.
+- Orchestrator review of the three branches (independent, before merging):
+  - Generator `gen/m4-r1`: 1 of 290 old expected answers changed (+0.079 % volume); 29 `roofStep` cases on both
+    sides of the threshold; the current solver passes 311/311 (roofStep 29/29). Claims match the branch.
+  - Checker `check/m4-qs1`: all 291 old `result.json` byte-identical; 12 new tests. Claims match the branch.
+  - Solver `solve/m5`: on the owner's private benchmarks the real district now takes 2.5 s (was about 50 s),
+    exact benchmarks unchanged (7/7), district output valid and unchanged in substance (2 m² of 54,000 m², from the
+    object split), all canopy warnings now located. One object vs one object per part: same geometry, but a few
+    shells are written in a different order (not byte-identical); minor, for M5.
+  - No agent session read the private folders or the seed.
+- `gen/m4-r1` fast-forwarded into `main` (`3b3b58a`). `lock-v0.1` moved to this commit (locked paths changed:
+  `cases/` from R1, `AGREEMENT.md` from Q-G1; both approved).
+- Merge order from here: checker (merge `main`, renumber its D-038 to D-039, re-run on the new cases), then solver
+  (merge `main`, renumber its D-038–D-040 to D-040–D-042, `roofStep` results).
+- validate (`scripts/validate.ps1`, after the commit and the tag move): build ✅ · tests 2903/2903 (Geometry 88,
+  Cli 31, Generator 2636, Checker 86, Repair 62) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
+
+### 2026-11-22 · generator · R1: expected answers include the roof-step flush; new fault `roofStep` (`gen/m4-r1`)
+- **Flush in every expected answer** (D-038), from the AGREEMENT text only (no solver code read). Applied last, to
+  the corrected height field: regions = edge-connected cells of equal height; touching = sharing an edge or a
+  corner; raise to the highest touching roof higher by more than 0 and less than the case's `minEdge`; repeat.
+  Volumes and heights come from the flushed field. Layouts are redrawn if the result depends on the raising order
+  or a touching step lies within 2.5 % of `minEdge` (neither happened at seed 1).
+- **Effect on existing cases:** the old 290-case plan (same seeds and recipes), rebuilt with this code and compared
+  byte for byte with the old `cases/`: **1 of 290 expected answers changed** (old `case_0137`, overlap, crossing bars;
+  now `case_0141`), **largest volume change +0.079 %**. 289 identical, none redrawn, no input changed, no
+  `maxHeight_m` changed. (Case IDs and combined recipes are reshuffled because the plan now has 13 faults, so the
+  comparison was made on the old plan, not by ID.)
+- **New fault `roofStep`:** touching blocks, overlapping blocks (crossing bars, corner overlap) or a block with a
+  set-back roof deck as tall as the step. 20 single-fault cases: steps 0.4×, 0.8×, 0.96× `minEdge` (raised, 4 each)
+  and 1.04×, 1.5× (kept, 4 each); 5 of them at `minEdge` 0.15 or 0.4. 9 combined cases (4 below the threshold).
+  In the new set the flush raises roofs in 17 cases (16 `roofStep`, 1 natural overlap); the largest change is
+  +1.313 %, so a solver that keeps such a step fails the volume check. Appended to `ExpectedSpec.KnownFaults`
+  (13 names, comment updated; nothing else changed in M2W.Geometry). AGREEMENT fault list: Q-G1 above.
+- **Cases per fault** (single / combined / total; clean 10; 310 cases, `case_0101`–`case_0410`): overlap 20/9/29,
+  stackedFloors 20/9/29, touchingWalls 20/9/29, smallGap 20/9/29, sliver 20/9/29, shortEdge 20/9/29,
+  duplicateVertices 20/10/30, openSurface 20/9/29, flippedFaces 20/9/29, floatingBlock 20/9/29, sunkBlock 20/10/30,
+  farCoordinates 20/9/29, roofStep 20/9/29. (`out/summary.json` adds `case_0007` to three of these.)
+- **Tests:** new `RoofStepTests.cs`:
+  - the self-check: in every case's expected height field, no two roofed cells sharing an edge or corner differ by
+    more than 0 and less than `minEdge` (written from the rule, not with the generator's helpers);
+  - coverage of both sides of the threshold;
+  - exact raised volume (step × lower-roof area) below the threshold, unchanged above;
+  - hand-made flush cases (corner contact, repetition, an order-dependent chain).
+  - Existing tests updated for 13 faults and 310 cases; the expected-answer test now also checks that the flush
+    only raises roofs and keeps footprints and maximum heights.
+  - The "no short edges by accident" check exempts only a `tier` deck lower than `minEdge` (that step is the
+    injected fault).
+  - The plan test no longer names the retired hidden seed (uses seed 2).
+- **Cases regenerated** with seed 1; `_example/case_0007` unchanged; `cases/README.md` no longer names a seed
+  ("Hidden cases use a private seed held by the owner.") and describes the flush and `roofStep`.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2903/2903 (Geometry 88, Cli 31, Generator 2636, Checker 86,
+  Repair 62) · cases **311/311** (roofStep 29/29; worst volume tolerance use 13.5 %, roofStep 0.0 %) · locks
+  **FAIL, approved for R1**: only `cases/` paths (README and regenerated cases) · VALIDATE: RED for locks only.
+- Next: owner merges `gen/m4-r1` and re-tags; Q-G1 (fault list). The checker branch should re-run on these cases.
+- Blockers: none.
+
+### 2026-11-22 · checker · Q-S1: anchors on a shared triangle edge are contained (D-039)
 - Fix: `Shell.ContainsInPlan` accepts barycentric weights ≥ −1e-9 (`Shell.PlanWeightTol`), edges still included.
   Its bounding-box prefilter is padded by 2 × 1e-9 × the box extent, so it never rejects a point the weight test
   accepts.
-- Audit of every other point and boundary test in the checker: listed in D-038. No other place can miss a point on
+- Audit of every other point and boundary test in the checker: listed in D-039. No other place can miss a point on
   a shared edge: the `mustMerge` / `mustStaySeparate` block locator, `minGap_m` and `noSelfIntersections` work on
   distances with `TouchTol`, or on the winding number. Nothing else changed.
 - Tests: new `AnchorContainmentTests` (12 tests, hand-built meshes, no case files):
@@ -62,8 +125,8 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
   `tests/M2W.Checker.Tests/AnchorContainmentTests.cs` (approved for Q-S1; owner re-tags at merge) · everything else
   green.
 - Next: after the owner merges `gen/m4-r1` into `main`, merge `main` into `check/m4-qs1`, validate again on the
-  regenerated cases (including the clean-control zero-repair test) and report. If the generator also used D-038,
-  renumber this entry then.
+  regenerated cases (including the clean-control zero-repair test) and report. (Renumbered from D-038 to D-039 at the
+  merge; the generator's R1 entry is D-038.)
 - Blockers: none (waiting for the generator merge for task 5).
 
 ### 2026-11-22 · owner · R1 written into AGREEMENT.md; lock moved; branches for the M4 gate work

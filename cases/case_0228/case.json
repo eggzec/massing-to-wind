@@ -10,10 +10,10 @@
   "tolerances": {
     "cellSize": 1,
     "minGap": 1,
-    "minEdge": 0.15,
+    "minEdge": 0.25,
     "weld": 0.001,
     "minAngleDeg": 5,
-    "groundSnap": 0.5
+    "groundSnap": 1
   },
   "files": {
     "input": "input.obj"

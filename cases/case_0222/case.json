@@ -10,7 +10,7 @@
   "tolerances": {
     "cellSize": 1,
     "minGap": 1,
-    "minEdge": 0.4,
+    "minEdge": 0.15,
     "weld": 0.001,
     "minAngleDeg": 5,
     "groundSnap": 0.5

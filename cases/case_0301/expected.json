@@ -1,59 +1,93 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0301",
-  "seed": 204196030,
+  "seed": 1191981293,
   "faultsInjected": [
+    "overlap",
+    "stackedFloors",
     "openSurface",
-    "farCoordinates"
+    "roofStep"
   ],
   "expected": {
-    "shellCount": 3,
+    "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 18422,
-        "footprintArea_m2": 921.1,
+        "volume_m3": 19964.79,
+        "footprintArea_m2": 1244.1,
+        "maxHeight_m": 16.275,
+        "genus": 0,
+        "blocks": [
+          "B02",
+          "B03"
+        ],
+        "anchor_m": [
+          58.642,
+          135.098
+        ]
+      },
+      {
+        "volume_m3": 16681.1,
+        "footprintArea_m2": 898.68,
         "maxHeight_m": 20,
-        "genus": 1,
+        "genus": 0,
+        "blocks": [
+          "B04",
+          "B05"
+        ],
+        "anchor_m": [
+          7.502,
+          128.864
+        ]
+      },
+      {
+        "volume_m3": 15451.18,
+        "footprintArea_m2": 896.38,
+        "maxHeight_m": 19,
+        "genus": 0,
+        "blocks": [
+          "B06"
+        ],
+        "anchor_m": [
+          -3.441,
+          92.132
+        ]
+      },
+      {
+        "volume_m3": 7534.395,
+        "footprintArea_m2": 810.15,
+        "maxHeight_m": 9.3,
+        "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          -101.571,
-          57.131
-        ]
-      },
-      {
-        "volume_m3": 17930.27,
-        "footprintArea_m2": 1367.26,
-        "maxHeight_m": 14.3,
-        "genus": 1,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          -77.172,
-          22.558
-        ]
-      },
-      {
-        "volume_m3": 15294.734,
-        "footprintArea_m2": 840.37,
-        "maxHeight_m": 18.2,
-        "genus": 0,
-        "blocks": [
-          "B03"
-        ],
-        "anchor_m": [
-          -126.112,
-          -4.607
+          19.607,
+          104.986
         ]
       }
     ],
-    "mustMerge": [],
+    "mustMerge": [
+      [
+        "B02",
+        "B03"
+      ],
+      [
+        "B04",
+        "B05"
+      ]
+    ],
     "mustStaySeparate": [
       [
         "B01",
-        "B03"
+        "B06"
+      ],
+      [
+        "B04",
+        "B06"
+      ],
+      [
+        "B05",
+        "B06"
       ]
     ]
   },

@@ -66,7 +66,7 @@ public sealed class Shell
     /// <summary>
     /// Smallest barycentric weight that still counts as inside a triangle in <see cref="ContainsInPlan"/>. A point
     /// exactly on an edge two triangles share (e.g. a rectangle's centre on the diagonal of its split) can get a
-    /// weight of about −1e-17 in both from rounding, so "≥ 0" would miss it in both (Q-S1, D-038). Weights have no
+    /// weight of about −1e-17 in both from rounding, so "≥ 0" would miss it in both (Q-S1, D-039). Weights have no
     /// units, so the bound is absolute; in length it is 1e-9 × the triangle's height over that edge.
     /// </summary>
     public const double PlanWeightTol = 1e-9;

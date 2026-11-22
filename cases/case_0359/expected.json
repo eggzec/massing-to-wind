@@ -1,62 +1,68 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0359",
-  "seed": 1435946824,
+  "seed": 360689429,
   "faultsInjected": [
-    "smallGap"
+    "roofStep"
   ],
   "expected": {
     "shellCount": 3,
     "shells": [
       {
-        "volume_m3": 58028.8,
-        "footprintArea_m2": 570.28,
-        "maxHeight_m": 106,
+        "volume_m3": 40753.125,
+        "footprintArea_m2": 579.15,
+        "maxHeight_m": 73.5,
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          9.15,
+          53.45
+        ]
+      },
+      {
+        "volume_m3": 29058.925,
+        "footprintArea_m2": 1230.93,
+        "maxHeight_m": 24.5,
         "genus": 0,
         "blocks": [
           "B02"
         ],
         "anchor_m": [
-          23.425,
-          59.6
+          25.15,
+          129.75
         ]
       },
       {
-        "volume_m3": 17358.348,
-        "footprintArea_m2": 1245.44,
-        "maxHeight_m": 14.7,
-        "genus": 1,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          60.7,
-          24.4
-        ]
-      },
-      {
-        "volume_m3": 12813.714,
-        "footprintArea_m2": 511.29,
-        "maxHeight_m": 30.9,
+        "volume_m3": 13462.911,
+        "footprintArea_m2": 1359.89,
+        "maxHeight_m": 9.9,
         "genus": 0,
         "blocks": [
-          "B03"
+          "B03",
+          "B04"
         ],
         "anchor_m": [
-          -1.4,
-          49.5
+          116.4,
+          74.05
         ]
       }
     ],
-    "mustMerge": [],
-    "mustStaySeparate": [
+    "mustMerge": [
       [
-        "B01",
-        "B02"
-      ],
+        "B03",
+        "B04"
+      ]
+    ],
+    "mustStaySeparate": [
       [
         "B02",
         "B03"
+      ],
+      [
+        "B02",
+        "B04"
       ]
     ]
   },
@@ -64,7 +70,7 @@
     "watertight": true,
     "outwardNormals": true,
     "noSelfIntersections": true,
-    "minGap_m": 0.5,
+    "minGap_m": 1,
     "minEdge_m": 0.25
   },
   "tolerances": {
