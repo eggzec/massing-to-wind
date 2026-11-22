@@ -4,12 +4,6 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-### Q-G1 · 2026-11-22 · generator · `roofStep` is not in the AGREEMENT.md fault list
-- `gen/m4-r1` adds the fault `roofStep` (R1 action 2): it is in `ExpectedSpec.KnownFaults`, in `faultsInjected` of
-  29 cases and in `out/summary.json`. The list "Faults to cover in v0.1" in AGREEMENT.md (owner-only) still has 12.
-- Suggested text: append `` `roofStep` `` to that list. Nothing else in the agreement needs to change; the rule
-  itself is already there (D-037). Generator work does not wait on this.
-
 ### Q-S1 · 2026-11-19 · solver · Checker misses an anchor that lies on an edge shared by two bottom triangles
 - **What happens:** `case_0284` (farCoordinates only). The solver writes the input box unchanged except for the origin
   shift: footprint 67.4 × 14.9 = 1004.26 m², volume 14,561.77 m³, every topology check passes. `volume_m3`,
@@ -44,6 +38,29 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 | M5 Package | Not started | — | — |
 
 ## Log (newest first)
+
+### 2026-11-22 · owner · Approvals Q-G1 and `fillUnsupported`; generator R1 merged; lock moved
+- Owner approvals (orchestrator review of all three branches, see below):
+  - **Q-G1 approved and done:** AGREEMENT.md lists `roofStep` as the 13th fault ("Faults to cover in v0.1").
+    Additive; `schemaVersion` stays 0.1. Q-G1 removed from "Waiting for owner".
+  - **`fillUnsupported` approved** (solver D-040 on `solve/m5`): a new op name in `report.json` for regions filled
+    down to the ground, with `count`, `area_m2`, `bbox_m`, `regions[]`. Additive; existing ops unchanged.
+- Orchestrator review of the three branches (independent, before merging):
+  - Generator `gen/m4-r1`: 1 of 290 old expected answers changed (+0.079 % volume); 29 `roofStep` cases on both
+    sides of the threshold; the current solver passes 311/311 (roofStep 29/29). Claims match the branch.
+  - Checker `check/m4-qs1`: all 291 old `result.json` byte-identical; 12 new tests. Claims match the branch.
+  - Solver `solve/m5`: on the owner's private benchmarks the real district now takes 2.5 s (was about 50 s),
+    exact benchmarks unchanged (7/7), district output valid and unchanged in substance (2 m² of 54,000 m², from the
+    object split), all canopy warnings now located. One object vs one object per part: same geometry, but a few
+    shells are written in a different order (not byte-identical); minor, for M5.
+  - No agent session read the private folders or the seed.
+- `gen/m4-r1` fast-forwarded into `main` (`3b3b58a`). `lock-v0.1` moved to this commit (locked paths changed:
+  `cases/` from R1, `AGREEMENT.md` from Q-G1; both approved).
+- Merge order from here: checker (merge `main`, renumber its D-038 to D-039, re-run on the new cases), then solver
+  (merge `main`, renumber its D-038–D-040 to D-040–D-042, `roofStep` results).
+- validate (`scripts/validate.ps1`, after the commit and the tag move): build ✅ · tests 2903/2903 (Geometry 88,
+  Cli 31, Generator 2636, Checker 86, Repair 62) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
 
 ### 2026-11-22 · generator · R1: expected answers include the roof-step flush; new fault `roofStep` (`gen/m4-r1`)
 - **Flush in every expected answer** (D-038), from the AGREEMENT text only (no solver code read). Applied last, to
