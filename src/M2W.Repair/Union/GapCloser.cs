@@ -46,13 +46,18 @@ public static class GapCloser
 
     /// <param name="minEdge">Bridges must survive the final plan, where points closer than this merge: a facing
     /// strip shorter than this along the walls does not count, and fillets reach this much further.</param>
-    public static Found Find(Dcel d, double[] height, double minGap, double tol, double minEdge = 0)
+    public static Found Find(Dcel d, double[] height, double minGap, double tol, double minEdge = 0) =>
+        Find(d, height, minGap, tol, minEdge, fullScan: false);
+
+    /// <param name="fullScan">Scan every level over the whole plan (<see cref="ScanAll"/>) instead of
+    /// <see cref="ScanNear"/>; the two must agree (tests, <see cref="Model.RepairOptions.FullGapScan"/>).</param>
+    internal static Found Find(Dcel d, double[] height, double minGap, double tol, double minEdge, bool fullScan)
     {
         var found = new Found();
         if (minGap <= 0) return found;
         var g = minGap - Slack;
         var levels = height.Where(h => h > 0).Distinct().OrderBy(h => h).ToList();
-        var perLevel = FullScan ? ScanAll(d, height, levels, g, tol, minEdge) : ScanNear(d, height, levels, g, tol, minEdge);
+        var perLevel = fullScan ? ScanAll(d, height, levels, g, tol, minEdge) : ScanNear(d, height, levels, g, tol, minEdge);
         foreach (var lf in perLevel)
         {
             if (lf is null) continue;
@@ -61,10 +66,6 @@ public static class GapCloser
         }
         return found;
     }
-
-    /// <summary>Test switch: scan every level over the whole plan (<see cref="ScanAll"/>) instead of
-    /// <see cref="ScanNear"/>; the two must agree.</summary>
-    internal static bool FullScan { get; set; }
 
     /// <summary>
     /// Margin added to the gap width when picking the plan edges that can be part of a gap. A wall is a chain of

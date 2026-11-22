@@ -15,9 +15,35 @@ _None open._
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Passed (midpoint review folded into the M4 gate review) | 252/291 at M3 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-22 |
 | M4 Hard faults | ✅ Passed (gate approved, feature freeze) | 311/311 visible · private hidden set 310/310 · owner benchmarks pass | 2026-11-22 |
-| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; `m2w render` + showcase images and CI (Linux, Windows, determinism, cross-OS) merged; CI green on GitHub (Linux, Windows, cross-OS identical; D-051); `solve/m5` (output order, options object, README) reviewed, not merged; demo pending | 311/311 | 2026-11-22 |
+| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; `m2w render` + showcase images and CI (Linux, Windows, determinism, cross-OS) merged; CI green on GitHub (Linux, Windows, cross-OS identical; D-051); `solve/m5` merged (output order, options object, README, KNOWN_LIMITATIONS); demo runner on `main` (D-053); demo recording (owner) pending | 311/311 | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · owner · `solve/m5` merged; Q-S2 answered and closed; showcase images regenerated
+- **Q-S2 answered (owner):**
+  - **Q-S2.1 accepted.** The `value` changes come from the checker reporting one of several tied shells, and from
+    rounding at the 12th digit. Reviewer check on the visible cases: 0 geometry changes, 0 `pass` changes, `value`
+    changes in 24 cases (21 ties + 3 rounding).
+  - **Q-S2.2: v0.2.** No change to weld choice or roof-triangulation ties under the freeze. KNOWN_LIMITATIONS
+    (D-047 entry) and the README now say the 4-of-930 figure comes from two shuffles per case and is a lower bound.
+  - Q-S2 removed from "Waiting for owner".
+- **Merged:** `solve/m5` (`aac00ec`) into `main` with a merge commit, done by the owner in the main worktree. The
+  solver's follow-up brief (`solver-m5-finish-2026-11-22.md`) is superseded: the owner did its items at the merge.
+  - Conflicts in PROGRESS.md and DECISIONS.md were additions on both sides. Kept both: decisions in number order
+    (D-051…D-043), the solver's entry placed by time.
+  - README: the four real captions (from `docs/images/showcase.json`), SDK requirement "8.0.400 or later (pinned in
+    `global.json`)", and the input-order wording.
+  - No locked path changed; `lock-v0.1` stays at `5c5c7a6`.
+- **Output guard:** all 311 `repaired.obj` on merged `main` are byte-identical to `solve/m5`'s own output.
+- **Showcase "after" images regenerated** from the merged output (`M2W_WRITE_SHOWCASE=1`; the writer reads
+  `expected.json`, so the owner runs it, never the solver).
+  - Only the four `-after.svg` changed: shell colours follow the new canonical shell order, geometry and framing are
+    the same (looked at).
+  - The `-before.svg` images and `showcase.json` are byte-identical.
+- **Not done (minor, for later):** xUnit2013 warning at `tests/M2W.Repair.Tests/Step9WarningLocationTests.cs:102`.
+- validate (`scripts/validate.ps1`, on the merged tree): build ✅ · tests 2953/2953 (Geometry 88, Cli 48, Generator
+  2636, Checker 98, Repair 83) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
 
 ### 2026-11-22 · owner · CI: `global.json` pins the .NET 8 SDK (CI had never compiled)
 - First CI run after the M5 merges (`45015063357`) failed in all three jobs. Read with `gh`: one cause, and every
@@ -100,6 +126,61 @@ _None open._
 - Not tested locally: the GitHub Windows runner itself (its PATH puts `Git\bin` first, which is row 3 above).
 - Next: owner review and merge of `check/m5`. Blockers: none.
 
+### 2026-11-22 · solver · M5: output order from geometry, no static test switch, README, KNOWN_LIMITATIONS
+- **A. Order independent of input order** (D-047). Shells, vertices and triangles are written in an order that
+  depends on the geometry only. Vertices are sorted by written position (X, Y, Z at 6 decimals), each triangle starts
+  at its smallest index, and shells are sorted by their sorted vertex lists (lowest ground corner first).
+  `solverVersion` 0.7.1.
+  - Test `Step10OrderTests` (7 tests): a synthetic district of 120 parts, on the axes and turned. Its objects in 4
+    shuffles; as one object (parts shuffled inside) and as one per part; with vertices renumbered and faces
+    reordered: byte-identical `repaired.obj` in every case. Without the change, 6 of the 7 fail.
+  - **Guard** (old vs new solver; 311 visible cases and 930 unseen from seeds 777, 2024 and 99991, generated with the
+    current generator):
+    - **all 1,241 `repaired.obj` changed bytes**; **0 changed geometry** (same shells, same oriented triangles by
+      written coordinates);
+    - every `result.json` check keeps its `pass`. `value` changed in 120 cases, all explained, none from geometry: a
+      different tied shell reported (139 checks in 117 cases), or 12th-digit rounding (3 checks). **Not literally
+      the guard as briefed, so I asked the owner (Q-S2.1).**
+  - Also measured: every case with its objects shuffled (2 shuffles, 2,480 runs) gives the same bytes except 4
+    unseen cases. These are sub-tolerance tie-breaks, left as they are under the freeze; see Q-S2.2 and
+    KNOWN_LIMITATIONS.md.
+- **B. No static switch** (D-048). `GapCloser.FullScan` removed. An internal `RepairOptions { FullGapScan }` is
+  passed from `MassingRepairer` (internal constructor) through `RepairPipeline.Run` to `HeightFieldUnion` and
+  `GapCloser.Find`. Public signatures are unchanged. The full-scan agreement test now uses its own options. Output
+  unchanged (validate below; the run is byte-identical to the guard run).
+- **C. README.md** rewritten around the problem statement. It now has:
+  - the CI badge (from the brief);
+  - before/after image slots with the exact paths;
+  - the 9 pipeline steps with D-numbers;
+  - the per-fault results table from `out/summary.json`, the unseen totals (930/930) and the owner's private results
+    copied from the M4 gate entry;
+  - the runtime;
+  - the quick start for bash and PowerShell;
+  - limitations and the v0.2 roadmap.
+  - Images and captions: `docs/images/showcase*.{svg,json}` exist on no branch yet (`gen/m5` has none). The paths
+    are in place; captions are placeholders until the generator's files are merged.
+  - **Quick start tested** in two fresh clones on Windows:
+    - Git Bash: `scripts/setup.sh`, `scripts/validate.sh` (GREEN), `check cases/_example/case_0007`;
+    - PowerShell: `setup.ps1`, `validate.ps1` (GREEN), `check`, `repair`, `generate`.
+    - All exit 0. Fixed one wrong example (`repair --out` takes the parent folder; output goes to
+      `<out>/<caseId>/`).
+  - **Not tested on Linux:** WSL Ubuntu here has no .NET SDK, and `gh` is not installed. The badge URL and the
+    GitHub API return "Not Found" (private repo or no run yet), so I could not confirm CI or the badge.
+  - Note: `setup.sh` / `setup.ps1` run `git init`, commit and tag when `.git` is not a directory. That is true in a
+    git worktree, where `.git` is a file, so do not run setup inside a worktree. Scripts are not mine; for the owner.
+- **Runtime** (Release, in-process, median of 7 runs after warm-up): 500 blocks 0.61 s on the axes and 0.79 s turned
+  (single runs 0.4–1.8 s); 2,020 parts about 3–3.5 s.
+- **D. KNOWN_LIMITATIONS.md: final pass.** Every entry has a D-number. Jog margins updated to the current cases
+  (visible 19 %, unseen 44.5 % of the footprint tolerance, all on `shortEdge` cases). Runtime updated. New entries:
+  output order and its two exceptions (D-047); gaps inside one part (inlets, narrow courtyards) not closed (D-032);
+  ground snap limits (D-049); a list of inputs that end `partial` (D-031, D-036, D-042, D-049); `runtime_ms` not
+  byte-identical (D-028). D-049 records the M3 choices for weld, cleanup, orientation, holes and ground snap.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2936/2936 (Geometry 88, Cli 31, Generator 2636, Checker 98,
+  Repair 83) · cases 311/311 · locks OK · **VALIDATE: GREEN**. Unseen seeds 777, 2024, 99991: 310/310 each.
+- Next: Q-S2. After the generator's and checker's M5 branches are merged: merge `main`, fill in the image captions
+  from `showcase.json`, check the images render and the badge, run validate, commit.
+- Blockers: none (Q-S2 does not block).
+
 ### 2026-11-22 · checker · M5 CI on GitHub Actions with a determinism check (branch `check/m5`, not merged)
 - Feature freeze respected: no change to `src/M2W.Checker/` or its tests. Changed: `.github/workflows/ci.yml`,
   `scripts/check-locks.sh` (one opt-in); new: `scripts/determinism.sh`, `scripts/determinism.ps1`. D-045 (CI design),
@@ -148,6 +229,7 @@ _None open._
   2929/2929 (Geometry 88, Cli 31, Generator 2636, Checker 98, Repair 76) · cases 311/311 · locks OK ·
   **VALIDATE: GREEN** (61 s locally).
 - Next: owner pushes `check/m5` and checks the first CI run as above, then merges.
+
 ### 2026-11-22 · generator · M5: `m2w render` and the README's before/after images
 - Branch `gen/m5` from `main` (`8fe8bfd`). Under the feature freeze: no change to case generation, faults, expected
   answers or `cases/`. Only a rendering tool and images are added; no locked path is touched.
@@ -186,6 +268,7 @@ _None open._
   Repair 76) · cases 311/311 (`out/summary.json`) · locks OK · **VALIDATE: GREEN**.
 - Next: the solver's README can embed the images; owner review and merge of `gen/m5`.
 - Blockers: none.
+
 
 ### 2026-11-22 · owner · M4 gate: approved, feature freeze
 - **M4 criteria met** (MILESTONES.md): gap closing below `minGap`, sliver and short-edge removal, combined-fault

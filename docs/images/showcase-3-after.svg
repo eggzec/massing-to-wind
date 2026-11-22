@@ -2,9 +2,9 @@
 <rect width="960" height="827.00" fill="#ffffff"/>
 <text x="24.00" y="32" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#1f2933">3 · case_0183 · repaired: 1 closed shell</text>
 <g stroke="#1f2933" stroke-width="0.6" stroke-linejoin="round">
-<path class="f" d="M936.00 144.48L401.24 437.14L401.24 763.13L936.00 470.46Z" fill="#3e5a78"/>
-<path class="f" d="M784.30 75.18L396.72 287.30L171.18 184.27L24.00 264.82L401.24 437.14L936.00 144.48Z" fill="#4b749f"/>
-<path class="f" d="M401.24 437.14L24.00 264.82L24.00 590.80L401.24 763.13Z" fill="#374d64"/>
+<path class="f" d="M401.24 763.13L936.00 470.46L936.00 144.48L401.24 437.14Z" fill="#3e5a78"/>
+<path class="f" d="M24.00 264.82L401.24 437.14L936.00 144.48L784.30 75.18L396.72 287.30L171.18 184.27Z" fill="#4b749f"/>
+<path class="f" d="M24.00 590.80L401.24 763.13L401.24 437.14L24.00 264.82Z" fill="#374d64"/>
 </g>
 <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#52606d">
 <text x="24.00" y="811.00">colour = shell (1)</text>

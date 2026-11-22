@@ -2,14 +2,14 @@
 <rect width="960" height="795.00" fill="#ffffff"/>
 <text x="24.00" y="32" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#1f2933">2 · case_0177 · repaired: 2 closed shells</text>
 <g stroke="#1f2933" stroke-width="0.6" stroke-linejoin="round">
-<path class="f" d="M624.87 64.00L524.73 114.07L835.85 269.64L936.00 219.56Z" fill="#e6882a"/>
-<path class="f" d="M524.73 114.07L524.73 227.08L835.85 382.64L835.85 269.64Z" fill="#885625"/>
-<path class="f" d="M936.00 219.56L835.85 269.64L835.85 382.64L936.00 332.57Z" fill="#a96827"/>
-<path class="f" d="M179.28 536.65L236.67 565.34L622.06 372.65L564.67 343.95Z" fill="#4b749f"/>
-<path class="f" d="M236.67 565.34L236.67 577.74L81.39 655.39L81.39 731.18L622.06 460.85L622.06 372.65Z" fill="#3e5a78"/>
-<path class="f" d="M179.28 536.65L179.28 549.05L236.67 577.74L236.67 565.34Z" fill="#364c63"/>
-<path class="f" d="M236.67 577.74L179.28 549.05L24.00 626.69L81.39 655.39Z" fill="#4b749f"/>
-<path class="f" d="M81.39 655.39L24.00 626.69L24.00 702.49L81.39 731.18Z" fill="#364c63"/>
+<path class="f" d="M835.85 269.64L936.00 219.56L624.87 64.00L524.73 114.07Z" fill="#e6882a"/>
+<path class="f" d="M835.85 382.64L835.85 269.64L524.73 114.07L524.73 227.08Z" fill="#885625"/>
+<path class="f" d="M835.85 382.64L936.00 332.57L936.00 219.56L835.85 269.64Z" fill="#a96827"/>
+<path class="f" d="M236.67 565.34L622.06 372.65L564.67 343.95L179.28 536.65Z" fill="#4b749f"/>
+<path class="f" d="M81.39 731.18L622.06 460.85L622.06 372.65L236.67 565.34L236.67 577.74L81.39 655.39Z" fill="#3e5a78"/>
+<path class="f" d="M236.67 577.74L236.67 565.34L179.28 536.65L179.28 549.05Z" fill="#364c63"/>
+<path class="f" d="M81.39 655.39L236.67 577.74L179.28 549.05L24.00 626.69Z" fill="#4b749f"/>
+<path class="f" d="M81.39 731.18L81.39 655.39L24.00 626.69L24.00 702.49Z" fill="#364c63"/>
 </g>
 <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#52606d">
 <text x="24.00" y="779.00">colour = shell (2)</text>

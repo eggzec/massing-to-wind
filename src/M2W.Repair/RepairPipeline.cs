@@ -10,7 +10,10 @@ namespace M2W.Repair;
 /// <summary>The repair steps in order. Each step logs what it did to the <see cref="RepairLog"/>.</summary>
 public static class RepairPipeline
 {
-    public static List<OutputShell> Run(Mesh input, Vec3 shift, Tolerances tol, RepairLog log)
+    public static List<OutputShell> Run(Mesh input, Vec3 shift, Tolerances tol, RepairLog log) =>
+        Run(input, shift, tol, log, RepairOptions.Default);
+
+    internal static List<OutputShell> Run(Mesh input, Vec3 shift, Tolerances tol, RepairLog log, RepairOptions options)
     {
         // 1. Local coordinates, one independent vertex list per input object.
         var solids = Split(input, shift);
@@ -99,7 +102,7 @@ public static class RepairPipeline
 
         // 5. Union as a 2.5D height field: merges stacked floors, overlaps and touching walls; one shell per footprint.
         // 6. Gaps narrower than minGap between separate parts are bridged inside the union (closing per height level).
-        var union = new HeightFieldUnion(solids, tol.Weld, tol.MinEdge, tol.MinGap).Run();
+        var union = new HeightFieldUnion(solids, tol.Weld, tol.MinEdge, tol.MinGap) { Options = options }.Run();
         foreach (var p in union.Problems) log.Fail(p);
         // Real gaps (width above the output precision) are closeGap; parts that touch (meet at a point, so the slice
         // has them apart with no width between) are filled at the contact too, and reported with their union.
@@ -226,7 +229,7 @@ public static class RepairPipeline
             if (!check.Ok) log.Fail($"object {s.Name}: not a valid closed shell ({check})");
             shells.Add(new OutputShell { Vertices = s.Vertices, Triangles = s.Triangles, Blocks = new[] { s.Block } });
         }
-        return shells;
+        return CanonicalOrder.Apply(shells, out _); // D-047
     }
 
     /// <summary>One <see cref="Solid"/> per input object with faces, vertices shifted to local coordinates.</summary>
