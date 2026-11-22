@@ -15,9 +15,44 @@ _None open._
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Passed (midpoint review folded into the M4 gate review) | 252/291 at M3 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-22 |
 | M4 Hard faults | ✅ Passed (gate approved, feature freeze) | 311/311 visible · private hidden set 310/310 · owner benchmarks pass | 2026-11-22 |
-| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; before/after images and `m2w render` on `gen/m5` (not merged); README, CI and demo not started | 311/311 | 2026-11-22 |
+| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; `m2w render` + showcase images and CI (Linux, Windows, determinism, cross-OS) merged; `solve/m5` (output order, options object, README) reviewed, not merged; first CI run and demo pending | 311/311 | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · owner · M5 review; `gen/m5` and `check/m5` merged
+- **Independent review** of the three M5 branches (generator, checker, solver). Checked independently rather than
+  from the PROGRESS entries:
+  - validate on each branch: all tests pass, 311/311, locks OK;
+  - the checker's pinned action SHAs match their tags; `determinism.sh` passes, and fails naming the file on a
+    planted one-byte difference;
+  - solver guard (main vs `solve/m5`, visible cases): 311/311 `repaired.obj` change bytes, 0 change geometry
+    (shells compared as sets of oriented triangles), 0 `pass` changes, `value` changes in 24 cases (21 tied shells
+    + 3 at the 12th digit), as the solver reported;
+  - object order: every visible case with its objects shuffled (two seeds) gives byte-identical output on
+    `solve/m5` (0/310 differ); on `main` 3/310 differ;
+  - showcase SVGs rendered and looked at: markers correct; pairs 2 and 4 do not show their repair at site scale
+    (0.2 m gap, 0.24 m roof step), open below.
+- Review finding sent back to the checker and fixed (`6aff62a`, D-050): `validate.ps1` found Git Bash only when
+  `git` resolved to `Git\cmd\git.exe`; from `Git\bin` or `Git\mingw64\bin` (Git Bash, possibly GitHub's Windows
+  runner) locks went FAIL with all code green. Re-checked by the owner: `locks: OK` with `git` from `mingw64\bin`.
+- **Merged:** `gen/m5` fast-forwarded into `main` (`30e3d1d`). `main` merged into `check/m5` (conflicts in
+  PROGRESS.md and DECISIONS.md were additions on both sides; kept both, newest first), then fast-forwarded into
+  `main` (`18d1b21`). No locked path changed; `lock-v0.1` stays at `5c5c7a6`. Decision numbers unique: D-043–D-044
+  generator, D-045, D-046, D-050 checker; D-047–D-049 are the solver's (not merged yet).
+- **Seen once, not reproduced:** one `M2W.Repair.Tests` failure in a validate run on `check/m5` (75/76; the test name
+  was not captured). 14 later runs (alone, whole solution in parallel, full validate) all pass. The only shared state
+  in those tests is the static `GapCloser.FullScan`, which `solve/m5` removes (D-048). If CI shows a Repair test
+  failure, note its name and send it to the solver.
+- Next:
+  - push `main` and check the first CI run against the checker's checklist (its entry below);
+  - solver: merge `main` into `solve/m5`, fill in the captions from `docs/images/showcase.json`, check images and
+    badge; Q-S2 answers recorded at that merge;
+  - after `solve/m5` merges: rerun the showcase writer so the "after" images match its output; decide on pairs 2
+    and 4.
+- validate (`scripts/validate.ps1`, on this commit's tree): build ✅ · tests 2946/2946 (Geometry 88, Cli 48,
+  Generator 2636, Checker 98, Repair 76) · cases 311/311 · locks OK · **VALIDATE: GREEN**. `determinism.ps1`: OK,
+  934 files identical.
+- Blockers: none.
 
 ### 2026-11-22 · checker · M5 follow-up: `validate.ps1` finds Git Bash from any `git.exe` location (branch `check/m5`, not merged)
 - Changed: `scripts/validate.ps1` only (the Git Bash lookup in the locks step). No change to `check-locks.sh`,
