@@ -71,7 +71,7 @@ public static class GapCloser
     /// nearly collinear plan edges (each vertex within weld of the line through its neighbours) and its distance is
     /// measured along the chord of the chain; the margin covers a chord up to 5 mm off its edges. Only a curved
     /// outline bends further; there a pair of walls is left alone when its edges are truly at least minGap apart
-    /// (D-038).
+    /// (D-040).
     /// </summary>
     private const double SkipMargin = 0.01;
 

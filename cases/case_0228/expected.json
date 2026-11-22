@@ -1,58 +1,71 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0228",
-  "seed": 309625648,
+  "seed": 172240074,
   "faultsInjected": [
-    "shortEdge"
+    "sunkBlock"
   ],
   "expected": {
-    "shellCount": 3,
+    "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 38151.264,
-        "footprintArea_m2": 395.76,
-        "maxHeight_m": 96.4,
-        "genus": 0,
+        "volume_m3": 25641.774,
+        "footprintArea_m2": 1378.59,
+        "maxHeight_m": 18.6,
+        "genus": 1,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          54.027,
-          -35.059
+          37.445,
+          -139.404
         ]
       },
       {
-        "volume_m3": 25490.99,
-        "footprintArea_m2": 1174.7,
-        "maxHeight_m": 21.7,
-        "genus": 1,
+        "volume_m3": 18457.92,
+        "footprintArea_m2": 788.8,
+        "maxHeight_m": 23.4,
+        "genus": 0,
         "blocks": [
           "B03"
         ],
         "anchor_m": [
-          41.172,
-          -94.219
+          94.855,
+          -156.533
         ]
       },
       {
-        "volume_m3": 5884.776,
-        "footprintArea_m2": 530.16,
-        "maxHeight_m": 11.1,
+        "volume_m3": 12653.2,
+        "footprintArea_m2": 632.66,
+        "maxHeight_m": 20,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          89.456,
+          -97.399
+        ]
+      },
+      {
+        "volume_m3": 10405.942,
+        "footprintArea_m2": 692.97,
+        "maxHeight_m": 15.9,
         "genus": 0,
         "blocks": [
           "B02"
         ],
         "anchor_m": [
-          30.193,
-          -57.127
+          86.944,
+          -70.46
         ]
       }
     ],
     "mustMerge": [],
     "mustStaySeparate": [
       [
-        "B01",
-        "B02"
+        "B03",
+        "B04"
       ]
     ]
   },
@@ -61,7 +74,7 @@
     "outwardNormals": true,
     "noSelfIntersections": true,
     "minGap_m": 1,
-    "minEdge_m": 0.15
+    "minEdge_m": 0.25
   },
   "tolerances": {
     "volumeRel": 0.01,

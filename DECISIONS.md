@@ -13,7 +13,7 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
-## D-040 · 2026-11-22 · solver (M5) · Region warnings carry a plan box and an area or count; one new op, `fillUnsupported`
+## D-042 · 2026-11-22 · solver (M5) · Region warnings carry a plan box and an area or count; one new op, `fillUnsupported`
 - Context: with a district in one object, "block X has no support below part of it" could not be found (owner
   benchmark, 2026-11-21, problem 2). The owner approved adding fields, not renaming or removing any.
 - Choice: every warning about a place states its plan box `[xmin, ymin, xmax, ymax]` (local coordinates, 3
@@ -31,7 +31,7 @@ Template:
   to `rebuildShells`.
 - Revisit if: readers want warnings as objects (schema 0.2).
 
-## D-039 · 2026-11-22 · solver (M5) · An object holding several closed solids is split into parts; touching parts are unions
+## D-041 · 2026-11-22 · solver (M5) · An object holding several closed solids is split into parts; touching parts are unions
 - Context: report detail depended on the object split (owner benchmark, problem 3): one object gave one `closeGap`
   of width 0 and no `unionBlocks`; one object per part gave 244 `closeGap` entries of width 0.
 - Choice: (1) before welding, an object is split into parts when its polygons (on a welded copy, joined across edges
@@ -53,7 +53,7 @@ Template:
 - Why: a closed component is a solid by itself; requiring all parts closed leaves broken objects as before.
 - Revisit if: one-object exports with open surfaces need the same independence (they stay one part today).
 
-## D-038 · 2026-11-22 · solver (M5) · Runtime: work only where it is needed; output unchanged
+## D-040 · 2026-11-22 · solver (M5) · Runtime: work only where it is needed; output unchanged
 - Context: a real district (about 500 parts, 8.4k triangles) took about 50 s; a synthetic 500-block city 9 s
   (axis-aligned) and 30 s (rotated blocks, heights to 1 cm). Profiling (Stopwatch per phase) found terms that grow
   with roof levels × plan edges: the baked plan held one outline per level (168k mostly identical segments);
@@ -78,6 +78,83 @@ Template:
   4.2 s. Test limit 15 s (3× the 5 s target).
 - Revisit if: gap levels dominate (each level with a gap still builds its near walls); then build walls once per
   plan and update them per level.
+
+## D-039 · 2026-11-22 · checker (M4 gate, Q-S1) · Plan containment of anchors accepts barycentric weights ≥ −1e-9
+- Context: `Shell.ContainsInPlan` (anchor matching, D-020) counted a point as inside a plan triangle only if all three
+  barycentric weights were ≥ 0. For an anchor exactly on an edge two triangles share (a rectangle's centre on the
+  diagonal of its split), rounding gives one weight of about −1e-17 to −2e-16 in **both** triangles, so the shell
+  counted as unmatched and `volume_m3`, `footprintArea_m2` and `maxHeight_m` failed on a correct output
+  (`case_0284`, Q-S1). Whether it happens depends on the coordinates, the anchor's decimal value and the order in
+  which each triangle lists its vertices, not only on which diagonal is used.
+- Choice: accept weights ≥ −`Shell.PlanWeightTol` = −1e-9 (owner's answer to Q-S1). Weights have no units, so the
+  bound is absolute. In length it is 1e-9 × the triangle's height over the edge: 1e-8 m for a 10 m triangle,
+  1e-5 m for a 10 km one, always below the 1e-6 m OBJ resolution at building scale. The bounding-box prefilter is
+  padded by 2 × 1e-9 × the box extent per axis (at most two weights can be negative), so it never rejects a point
+  the weight test accepts. "Edges included" is kept.
+- Audit of the other point and boundary tests in the checker:
+  - **Changed:** `Shell.ContainsInPlan`, both the weight test and its box prefilter. Its only caller is
+    `Grader.Match`, so the anchor rule (D-020) is the only behaviour affected.
+  - **Not changed, `Shell.SolidDistance`** (used by `BlockLocator` for `mustMerge` / `mustStaySeparate`, D-021): a
+    point on the surface is caught by its distance to the nearest triangle (≤ `Geom.TouchTol`, 1e-8 m). That
+    distance is continuous across shared edges, so a point on one has distance ≈ 0 to both triangles and cannot fall
+    between them. Interior points use the winding number with a threshold of 0.5, nowhere near rounding.
+  - **Not changed, `BlockLocator` voting:** ties within `AmbiguityTol` (1e-6 m) already stop a point on a wall two
+    shells share from voting; this is by design (D-021).
+  - **Not changed, `Geom.ClosestPointOnTriangle`:** its Voronoi-region sign tests can tip either way on a region
+    boundary, but the closest point is continuous there, so the distance changes only by rounding (~1e-15 m), far
+    below `TouchTol`. The same holds for `SegmentTouchesTriangle`, `TrianglesTouch` and `TriangleTriangleDistance`
+    (`minGap_m`, `noSelfIntersections`), which compare distances with `TouchTol`.
+  - **Not changed, `ShellGap.Distance` nesting test:** winding number of one vertex, threshold 0.5.
+  - **Not changed, `SelfIntersection.EdgeEntersCorner`:** an angular test with `AngleTol` (1e-10) on both sides; it
+    is not a plan-point test.
+  - **Not changed, `Grader.Measure` footprint:** classifies faces, not points (`n.Z >= 0` skips walls and roofs; a
+    wall whose normal rounds to −1e-17 in Z adds ~0 m²). `groundContact` uses `weld`.
+  - **Not changed, `Box.Distance` in `SolidDistance`:** exact for points within the box, and points on the surface
+    have already returned through the distance branch.
+- Tests (`AnchorContainmentTests`, hand-built meshes): three boxes, the Q-S1 box among them, with a decimal anchor at
+  the centre, under all 4 diagonal splits × 81 vertex rotations of the plan triangles: always contained and all
+  checks pass. Each box has triangulations the old rule misses, asserted so the test cannot pass by luck. Also:
+  points on outer, corner and slanted edges are contained; 1e-12 m outside an outer edge is contained; 1e-6 m outside
+  an axis-aligned or a slanted edge (inside the bounding box) is not; an anchor 1e-6 m outside every shell still
+  leaves its expected shell unmatched; the Q-S1 far-coordinate box, shifted to local coordinates and written through
+  a 6-decimal OBJ, passes in every triangulation. With the bound set to 0 (old rule), 8 of these 12 tests fail.
+- Alternatives: test containment against the bottom face as a polygon (more code, and needs the bottom faces to be
+  identified and joined, which a repaired shell does not promise); a tolerance in metres (needs scaling by the
+  triangle size to compare with weights; the owner chose the weight bound).
+- Why: smallest change that removes the double miss, approved by the owner. Graded results are unchanged: all 291
+  visible `result.json` files are byte-identical before and after.
+- Revisit if: anchors may legitimately sit within 1e-9 × triangle height outside a shell (not possible with v0.1
+  anchors, which are interior points of their shell's plan, D-017).
+
+## D-038 · 2026-11-22 · generator (M4 gate, R1) · How expected answers apply the roof-step flush; the `roofStep` fault
+- Context: D-037 adds the rule "touching roof regions differing by less than `minEdge` are raised to the highest,
+  repeated" and says expected answers include it. The text leaves three details open: what a region is, the order
+  of raising when steps chain, and steps that sit right at `minEdge`.
+- Choice (flush): applied last, to the corrected height field (after ground snap, gap fill D-014 and every other
+  correction). A region is a maximal edge-connected set of roofed cells of equal height; two regions touch if any of
+  their cells share an edge or a corner. Each round, every region is raised to the highest touching region that is
+  higher by more than 0 and less than the case's `minEdge`; regions are rebuilt and this repeats until nothing
+  changes. Volumes and heights are then computed from that field (`BuiltCase.ExpectedField`). Footprints, shells,
+  genus, anchors and the maximum height cannot change. Two redraw rules keep the answer unambiguous:
+  (1) the flush is also computed raising one region at a time, lowest first and highest first; if any of the three
+  differ (a chain such as 10 / 10.2 / 10.4 m at `minEdge` 0.25 gives 10.4 everywhere or leaves 10 / 10.4) the layout
+  is redrawn; (2) a layout with a touching step within 2.5 % of `minEdge` (before or after the flush) is redrawn, so
+  rounding never decides a side. Natural heights are sums of 0.1 m floor heights, so a step of exactly 0.4 m at
+  `minEdge` 0.4 could otherwise occur. Neither rule fired at seed 1. On the old 290-case plan (same seeds and
+  recipes) the flush changes 1 expected answer (+0.079 % volume, crossing bars) and nothing is redrawn.
+- Choice (`roofStep`): 20 single-fault cases, about 9 combined. Kinds rotate: `touching` (a second block wall to
+  wall, its ground floor sized so its roof is higher or lower by the step), `overlap` (crossing bars or corner
+  overlap, same height rule), `tier` (one block with a set-back roof deck exactly the step tall, cut back on one
+  side or all sides). No other setbacks in the group, so it has exactly two roof heights a step apart (checked).
+  Steps are 0.4×, 0.8×, 0.96× `minEdge` (raised) and 1.04×, 1.5× (kept), 4 single cases each; `minEdge` is 0.15 or
+  0.4 in about 30 % (D-010). `tier` cases are always written as polygons: a deck lower than `minEdge` would be
+  triangulated into sliver triangles, which are a different fault. Appended to `ExpectedSpec.KnownFaults` (13).
+- Alternatives: transitive closure on the initial heights only (ignores "repeated"); lowest-first or simultaneous
+  as the single definition (the agreement does not pick one, and a solver could fairly choose another); letting
+  near-threshold steps through (a solver at 0.2499 vs 0.25 would be graded on rounding).
+- Why: every expected answer is the same under every reasonable reading of the rule, and the threshold is tested
+  from both sides by deliberate cases, not by accident.
+- Revisit if: the owner fixes an order for chained steps in AGREEMENT.md (then chains can be generated on purpose).
 
 ## D-037 · 2026-11-22 · owner (M4 gate) · Roof steps below `minEdge` are flushed to the higher roof, and expected answers include it
 - Context: neighbouring roofs whose heights differ by less than `minEdge` leave a wall step with edges shorter than

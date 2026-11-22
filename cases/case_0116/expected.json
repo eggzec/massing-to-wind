@@ -1,63 +1,63 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0116",
-  "seed": 1526107719,
+  "seed": 434886002,
   "faultsInjected": [
-    "stackedFloors"
+    "farCoordinates"
   ],
   "expected": {
     "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 59244.141,
-        "footprintArea_m2": 2141.73,
-        "maxHeight_m": 82.5,
-        "genus": 0,
-        "blocks": [
-          "B03"
-        ],
-        "anchor_m": [
-          68.15,
-          66.7
-        ]
-      },
-      {
-        "volume_m3": 43478.244,
-        "footprintArea_m2": 1759.35,
-        "maxHeight_m": 49.6,
-        "genus": 0,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          24.85,
-          121.85
-        ]
-      },
-      {
-        "volume_m3": 21016.369,
-        "footprintArea_m2": 349.69,
-        "maxHeight_m": 60.1,
+        "volume_m3": 38539.264,
+        "footprintArea_m2": 376.36,
+        "maxHeight_m": 102.4,
         "genus": 0,
         "blocks": [
           "B04"
         ],
         "anchor_m": [
-          116.05,
-          76.05
+          29.65,
+          97.2
         ]
       },
       {
-        "volume_m3": 13246.74,
-        "footprintArea_m2": 716.04,
-        "maxHeight_m": 18.5,
-        "genus": 0,
+        "volume_m3": 37925.152,
+        "footprintArea_m2": 1529.24,
+        "maxHeight_m": 24.8,
+        "genus": 1,
         "blocks": [
           "B02"
         ],
         "anchor_m": [
-          13.95,
-          52.6
+          75.45,
+          44.7
+        ]
+      },
+      {
+        "volume_m3": 20640.896,
+        "footprintArea_m2": 353.44,
+        "maxHeight_m": 58.4,
+        "genus": 0,
+        "blocks": [
+          "B03"
+        ],
+        "anchor_m": [
+          4.7,
+          97.2
+        ]
+      },
+      {
+        "volume_m3": 14536.32,
+        "footprintArea_m2": 1317.44,
+        "maxHeight_m": 12,
+        "genus": 1,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          -6,
+          44.7
         ]
       }
     ],
@@ -65,7 +65,19 @@
     "mustStaySeparate": [
       [
         "B01",
+        "B02"
+      ],
+      [
+        "B01",
         "B03"
+      ],
+      [
+        "B01",
+        "B04"
+      ],
+      [
+        "B02",
+        "B04"
       ],
       [
         "B03",

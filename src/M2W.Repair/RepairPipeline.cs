@@ -24,7 +24,7 @@ public static class RepairPipeline
             return new List<OutputShell>();
         }
 
-        // 1b. An object holding several separate closed solids becomes one part per solid (D-039).
+        // 1b. An object holding several separate closed solids becomes one part per solid (D-041).
         var parts = new List<Solid>();
         foreach (var s in solids)
         {

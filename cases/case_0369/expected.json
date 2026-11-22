@@ -1,45 +1,64 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0369",
-  "seed": 1449599165,
+  "seed": 125989833,
   "faultsInjected": [
-    "smallGap"
+    "roofStep"
   ],
   "expected": {
-    "shellCount": 2,
+    "shellCount": 3,
     "shells": [
       {
-        "volume_m3": 16171.393,
-        "footprintArea_m2": 1145.89,
-        "maxHeight_m": 14.7,
+        "volume_m3": 18124.343,
+        "footprintArea_m2": 1085.29,
+        "maxHeight_m": 16.7,
+        "genus": 0,
+        "blocks": [
+          "B02",
+          "B03"
+        ],
+        "anchor_m": [
+          84.462,
+          115.14
+        ]
+      },
+      {
+        "volume_m3": 18121.236,
+        "footprintArea_m2": 835.08,
+        "maxHeight_m": 21.7,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          87.419,
+          154.41
+        ]
+      },
+      {
+        "volume_m3": 12427.408,
+        "footprintArea_m2": 1109.59,
+        "maxHeight_m": 11.2,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          55.965,
-          0.138
-        ]
-      },
-      {
-        "volume_m3": 12244.05,
-        "footprintArea_m2": 349.83,
-        "maxHeight_m": 35,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          8.241,
-          -15.093
+          123.159,
+          112.684
         ]
       }
     ],
-    "mustMerge": [],
+    "mustMerge": [
+      [
+        "B02",
+        "B03"
+      ]
+    ],
     "mustStaySeparate": [
       [
         "B01",
-        "B02"
+        "B04"
       ]
     ]
   },
@@ -47,7 +66,7 @@
     "watertight": true,
     "outwardNormals": true,
     "noSelfIntersections": true,
-    "minGap_m": 0.5,
+    "minGap_m": 1,
     "minEdge_m": 0.25
   },
   "tolerances": {

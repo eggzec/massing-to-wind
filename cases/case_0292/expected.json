@@ -1,83 +1,64 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0292",
-  "seed": 1956609364,
+  "seed": 457378,
   "faultsInjected": [
-    "overlap",
-    "stackedFloors",
-    "sliver",
-    "sunkBlock"
+    "touchingWalls"
   ],
   "expected": {
     "shellCount": 3,
     "shells": [
       {
-        "volume_m3": 77339.107,
-        "footprintArea_m2": 1184.24,
-        "maxHeight_m": 76.8,
+        "volume_m3": 37316.192,
+        "footprintArea_m2": 1371.76,
+        "maxHeight_m": 42.5,
         "genus": 0,
         "blocks": [
-          "B02",
-          "B03"
+          "B03",
+          "B04"
         ],
         "anchor_m": [
-          -48.427,
-          27.985
+          -60.263,
+          -20.367
         ]
       },
       {
-        "volume_m3": 70693.26,
-        "footprintArea_m2": 2299,
-        "maxHeight_m": 93.3,
+        "volume_m3": 25875.325,
+        "footprintArea_m2": 533.61,
+        "maxHeight_m": 52.5,
+        "genus": 0,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          -50.643,
+          -68.836
+        ]
+      },
+      {
+        "volume_m3": 8330.245,
+        "footprintArea_m2": 340.01,
+        "maxHeight_m": 24.5,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          -42.186,
-          70.023
-        ]
-      },
-      {
-        "volume_m3": 9519.554,
-        "footprintArea_m2": 393.37,
-        "maxHeight_m": 24.2,
-        "genus": 0,
-        "blocks": [
-          "B04"
-        ],
-        "anchor_m": [
-          -92.146,
-          48.751
+          -21.855,
+          -47.801
         ]
       }
     ],
     "mustMerge": [
       [
-        "B02",
-        "B03"
+        "B03",
+        "B04"
       ]
     ],
     "mustStaySeparate": [
       [
         "B01",
         "B02"
-      ],
-      [
-        "B01",
-        "B03"
-      ],
-      [
-        "B01",
-        "B04"
-      ],
-      [
-        "B02",
-        "B04"
-      ],
-      [
-        "B03",
-        "B04"
       ]
     ]
   },

@@ -4,27 +4,7 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-### Q-S1 · 2026-11-19 · solver · Checker misses an anchor that lies on an edge shared by two bottom triangles
-- **What happens:** `case_0284` (farCoordinates only). The solver writes the input box unchanged except for the origin
-  shift: footprint 67.4 × 14.9 = 1004.26 m², volume 14,561.77 m³, every topology check passes. `volume_m3`,
-  `footprintArea_m2` and `maxHeight_m` still fail with "no repaired shell left that contains its anchor (28.6, 56.25)".
-  The anchor is the rectangle's centre. Both diagonals of a rectangle pass through its centre, so whichever way the
-  bottom quad is split into two triangles, the anchor lies on their shared edge.
-- **Reproduction (scratch copy, nothing in the repo changed):** the same box with one extra vertex at the middle of a
-  long edge, so that no triangle edge runs through the centre, passes all three checks (`m2w check` on a copy of
-  `out/case_0284` with only `repaired.obj` edited).
-- **Effect:** 1 case at M3 step 1 (3 had an anchor-containment failure, 2 of them also for other reasons). After M3
-  step 4 it is **0 cases**: the rebuilt shells happen not to put a triangle edge through any anchor. The defect is
-  still there and will hit any output whose bottom triangulation runs an edge through an anchor (hidden cases too).
-- **Suggested fix (checker, locked, so owner's call):** treat a point on the boundary of a bottom triangle as inside
-  (or test containment against the bottom face as a polygon, not triangle by triangle).
-- **Solver meanwhile:** I am *not* choosing triangulations to dodge anchor positions; that would be tuning output to
-  the grader. Failures caused by this are listed as such in each PROGRESS entry.
-- **Owner answer (2026-11-21): approved.** Confirmed in review: `Shell.ContainsInPlan`
-  (`src/M2W.Checker/Shell.cs:82`) already counts edges as inside (`u >= 0 && v >= 0 && w >= 0`), but for an anchor
-  exactly on a diagonal, rounding makes one weight about −1e-17 in both triangles. Fix: accept weights `>= -1e-9`.
-  Checker agent implements it (see the 2026-11-21 owner entry in the log). Delete this item once the fix is merged and
-  re-locked.
+_None open._
 
 
 ## Current status
@@ -39,6 +19,45 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 
 ## Log (newest first)
 
+### 2026-11-22 · owner · Checker Q-S1 merged; Q-S1 closed; lock moved
+- `check/m4-qs1` merged: `main` merged into it first (conflicts in PROGRESS.md and DECISIONS.md were additions on
+  both sides; kept both, newest first), the checker's decision renumbered **D-038 → D-039** (the generator's R1
+  entry keeps D-038; references in `Shell.cs` and `AnchorContainmentTests.cs` comments updated), then
+  fast-forwarded into `main` (`a469c64`).
+- Checker task 5 (re-run on the regenerated cases), done by the owner at the merge: tests 2915/2915 incl. Checker
+  98 and the clean-control zero-repair test · cases 311/311. All 311 `result.json` are byte-identical with and
+  without the Q-S1 fix (same solver), so the fix changes no grade on the new cases either.
+- **Q-S1 closed** and removed from "Waiting for owner".
+- `lock-v0.1` moved to this commit (locked paths changed: `src/M2W.Checker/Shell.cs`,
+  `tests/M2W.Checker.Tests/AnchorContainmentTests.cs`; approved for Q-S1).
+- Next: solver (merge `main` into `solve/m5`, renumber its D-038–D-040 to D-040–D-042, `roofStep` results).
+- validate (`scripts/validate.ps1`, after the commit and the tag move): build ✅ · tests 2915/2915 (Geometry 88,
+  Cli 31, Generator 2636, Checker 98, Repair 62) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
+
+### 2026-11-22 · owner · Approvals Q-G1 and `fillUnsupported`; generator R1 merged; lock moved
+- Owner approvals (orchestrator review of all three branches, see below):
+  - **Q-G1 approved and done:** AGREEMENT.md lists `roofStep` as the 13th fault ("Faults to cover in v0.1").
+    Additive; `schemaVersion` stays 0.1. Q-G1 removed from "Waiting for owner".
+  - **`fillUnsupported` approved** (solver D-042, numbered D-040 on `solve/m5` before the merge): a new op name in `report.json` for regions filled
+    down to the ground, with `count`, `area_m2`, `bbox_m`, `regions[]`. Additive; existing ops unchanged.
+- Orchestrator review of the three branches (independent, before merging):
+  - Generator `gen/m4-r1`: 1 of 290 old expected answers changed (+0.079 % volume); 29 `roofStep` cases on both
+    sides of the threshold; the current solver passes 311/311 (roofStep 29/29). Claims match the branch.
+  - Checker `check/m4-qs1`: all 291 old `result.json` byte-identical; 12 new tests. Claims match the branch.
+  - Solver `solve/m5`: on the owner's private benchmarks the real district now takes 2.5 s (was about 50 s),
+    exact benchmarks unchanged (7/7), district output valid and unchanged in substance (2 m² of 54,000 m², from the
+    object split), all canopy warnings now located. One object vs one object per part: same geometry, but a few
+    shells are written in a different order (not byte-identical); minor, for M5.
+  - No agent session read the private folders or the seed.
+- `gen/m4-r1` fast-forwarded into `main` (`3b3b58a`). `lock-v0.1` moved to this commit (locked paths changed:
+  `cases/` from R1, `AGREEMENT.md` from Q-G1; both approved).
+- Merge order from here: checker (merge `main`, renumber its D-038 to D-039, re-run on the new cases), then solver
+  (merge `main`, renumber its D-038–D-040 to D-040–D-042, `roofStep` results).
+- validate (`scripts/validate.ps1`, after the commit and the tag move): build ✅ · tests 2903/2903 (Geometry 88,
+  Cli 31, Generator 2636, Checker 86, Repair 62) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
+
 ### 2026-11-22 · solver · M5 problems 1–3: runtime, warnings that say where, report detail independent of the object split
 - **1. Runtime.** New `SyntheticCity` (tests, fixed seed): city blocks of two terraced rows with shared walls, houses
   0.1–0.9 m apart now and then, alleys and gardens over 1 m, streets 12–18 m, varied heights, set-back tiers and a
@@ -48,7 +67,7 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
     per roof level, 168k segments, mostly identical copies; (b) face labelling looped over every fill (69k gap
     bridges, 629 distinct); (c) gap closing rebuilt components and walls of the whole plan at every level and tested
     all wall pairs; (d) crossing tests swept on X only; (e) point location scanned all faces. All changed so the
-    result is the same (D-038).
+    result is the same (D-040).
   - Times (this machine, Release, 500 blocks): **1.15 s** axis-aligned (was 9.0 s), **1.37 s** rotated (was
     30.3 s); 2000 parts 4.2 s. In the Debug test build: 1.3–2.6 s. Test limit 15 s (3× the 5 s target), as one
     object and as many. From the speed-ups seen (7.8× to 22×), the owner's 50 s district should take about 2.5–6.5 s;
@@ -57,15 +76,15 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
     CLI run, with JIT, mean 18.6 ms vs 9.0 ms measured today before the change).
   - **Guard:** `repaired.obj` byte-identical before and after on all 291 visible cases and the unseen sets (seeds
     777, 2024, 99991: 870 cases), and against the old solver on synthetic cities of 250 and 500 parts. The one
-    possible difference (curved outlines bending more than 5 mm from a wall's chord) is in D-038.
-- **2. Warnings that say where** (D-040). Each region warning gives the plan box `[xmin, ymin, xmax, ymax]` in local
+    possible difference (curved outlines bending more than 5 mm from a wall's chord) is in D-040.
+- **2. Warnings that say where** (D-042). Each region warning gives the plan box `[xmin, ymin, xmax, ymax]` in local
   coordinates and an area or count: support fill (per block: regions, m², box), holes left open, the per-object
   fallback, unbridged gaps, sloped triangles, untriangulated roofs, invalid shells, a short output edge, a block
   below ground. Operation entries: **new op `fillUnsupported`** (block, `count` regions, `area_m2`, `bbox_m`,
   `regions[]`); `closeHoles` gains `leftOpen` / `leftOpenRegions`; the fallback logs `rebuildShells` with
   `fallback` and `bbox_m`; `closeGap` gains `bbox_m`; `unionBlocks` gains `pointContacts`. No field renamed or
   removed. The owner may veto the new op name (then the data moves to `rebuildShells`).
-- **3. Same report for one object or many** (D-039). An object holding several separate closed solids is split into
+- **3. Same report for one object or many** (D-041). An object holding several separate closed solids is split into
   parts `<object>#k`, each repaired as an object of its own would be (the ground snap still moves the whole object).
   Parts meeting only at a point are filled there as before but reported as `pointContacts` on `unionBlocks`;
   `closeGap` now lists only real gaps (width > 0) with width and `bbox_m`.
@@ -76,7 +95,7 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
     `closeGap [B01, B01]`, with a note. No other report change; `solverVersion` 0.7.0.
 - **5. `KNOWN_LIMITATIONS.md`:** new Solver section: canopies filled down (`partial`, now located), sloped roofs not
   represented (`partial`), output slivers (D-035), flush volume change (D-030/D-037), jogs by least change (D-034),
-  object splits (D-039), curved outlines (D-038), and the measured runtime.
+  object splits (D-041), curved outlines (D-040), and the measured runtime.
 - Tests: 76 solver tests (+14): 500-block timing (two layouts, both object splits, same output), one object vs many
   (120 parts, two layouts), fast gap closing vs full scan (`GapCloser.FullScan`, two layouts), city determinism,
   7 location/union tests (canopy region and op, map coordinates, two regions, gap box, corner contact, split object,
@@ -90,6 +109,71 @@ _Agents: put questions that need the owner here (newest first). Owner: answer in
 - **4. `roofStep` results:** not yet: `main` has not moved since `658cc96` (the generator's R1 branch is not merged).
   After the merge I merge `main` into `solve/m5`, validate and report the `roofStep` pass count and worst margin.
 - Next: problem 4 after the owner merges R1. Blockers: none (owner decision wanted on the `fillUnsupported` op name).
+
+### 2026-11-22 · generator · R1: expected answers include the roof-step flush; new fault `roofStep` (`gen/m4-r1`)
+- **Flush in every expected answer** (D-038), from the AGREEMENT text only (no solver code read). Applied last, to
+  the corrected height field: regions = edge-connected cells of equal height; touching = sharing an edge or a
+  corner; raise to the highest touching roof higher by more than 0 and less than the case's `minEdge`; repeat.
+  Volumes and heights come from the flushed field. Layouts are redrawn if the result depends on the raising order
+  or a touching step lies within 2.5 % of `minEdge` (neither happened at seed 1).
+- **Effect on existing cases:** the old 290-case plan (same seeds and recipes), rebuilt with this code and compared
+  byte for byte with the old `cases/`: **1 of 290 expected answers changed** (old `case_0137`, overlap, crossing bars;
+  now `case_0141`), **largest volume change +0.079 %**. 289 identical, none redrawn, no input changed, no
+  `maxHeight_m` changed. (Case IDs and combined recipes are reshuffled because the plan now has 13 faults, so the
+  comparison was made on the old plan, not by ID.)
+- **New fault `roofStep`:** touching blocks, overlapping blocks (crossing bars, corner overlap) or a block with a
+  set-back roof deck as tall as the step. 20 single-fault cases: steps 0.4×, 0.8×, 0.96× `minEdge` (raised, 4 each)
+  and 1.04×, 1.5× (kept, 4 each); 5 of them at `minEdge` 0.15 or 0.4. 9 combined cases (4 below the threshold).
+  In the new set the flush raises roofs in 17 cases (16 `roofStep`, 1 natural overlap); the largest change is
+  +1.313 %, so a solver that keeps such a step fails the volume check. Appended to `ExpectedSpec.KnownFaults`
+  (13 names, comment updated; nothing else changed in M2W.Geometry). AGREEMENT fault list: Q-G1 above.
+- **Cases per fault** (single / combined / total; clean 10; 310 cases, `case_0101`–`case_0410`): overlap 20/9/29,
+  stackedFloors 20/9/29, touchingWalls 20/9/29, smallGap 20/9/29, sliver 20/9/29, shortEdge 20/9/29,
+  duplicateVertices 20/10/30, openSurface 20/9/29, flippedFaces 20/9/29, floatingBlock 20/9/29, sunkBlock 20/10/30,
+  farCoordinates 20/9/29, roofStep 20/9/29. (`out/summary.json` adds `case_0007` to three of these.)
+- **Tests:** new `RoofStepTests.cs`:
+  - the self-check: in every case's expected height field, no two roofed cells sharing an edge or corner differ by
+    more than 0 and less than `minEdge` (written from the rule, not with the generator's helpers);
+  - coverage of both sides of the threshold;
+  - exact raised volume (step × lower-roof area) below the threshold, unchanged above;
+  - hand-made flush cases (corner contact, repetition, an order-dependent chain).
+  - Existing tests updated for 13 faults and 310 cases; the expected-answer test now also checks that the flush
+    only raises roofs and keeps footprints and maximum heights.
+  - The "no short edges by accident" check exempts only a `tier` deck lower than `minEdge` (that step is the
+    injected fault).
+  - The plan test no longer names the retired hidden seed (uses seed 2).
+- **Cases regenerated** with seed 1; `_example/case_0007` unchanged; `cases/README.md` no longer names a seed
+  ("Hidden cases use a private seed held by the owner.") and describes the flush and `roofStep`.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2903/2903 (Geometry 88, Cli 31, Generator 2636, Checker 86,
+  Repair 62) · cases **311/311** (roofStep 29/29; worst volume tolerance use 13.5 %, roofStep 0.0 %) · locks
+  **FAIL, approved for R1**: only `cases/` paths (README and regenerated cases) · VALIDATE: RED for locks only.
+- Next: owner merges `gen/m4-r1` and re-tags; Q-G1 (fault list). The checker branch should re-run on these cases.
+- Blockers: none.
+
+### 2026-11-22 · checker · Q-S1: anchors on a shared triangle edge are contained (D-039)
+- Fix: `Shell.ContainsInPlan` accepts barycentric weights ≥ −1e-9 (`Shell.PlanWeightTol`), edges still included.
+  Its bounding-box prefilter is padded by 2 × 1e-9 × the box extent, so it never rejects a point the weight test
+  accepts.
+- Audit of every other point and boundary test in the checker: listed in D-039. No other place can miss a point on
+  a shared edge: the `mustMerge` / `mustStaySeparate` block locator, `minGap_m` and `noSelfIntersections` work on
+  distances with `TouchTol`, or on the winding number. Nothing else changed.
+- Tests: new `AnchorContainmentTests` (12 tests, hand-built meshes, no case files):
+  - three boxes with the anchor at the centre (the Q-S1 box among them), under all diagonal splits and all vertex
+    rotations of the plan triangles: contained, and all checks pass;
+  - points on outer edges, corners and a slanted edge: contained; 1e-6 m outside an edge: not contained;
+  - the Q-S1 far-coordinate box, shifted to local coordinates through a 6-decimal OBJ, passes.
+  - Each centre test asserts that the old rule misses in some triangulation. With the bound set to 0, 8 of the 12
+    fail.
+- No other behaviour change: all 291 `out/case_*/result.json` are byte-identical to a run on `main` @ `658cc96`
+  before the change.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2477/2477 (Geometry 88, Cli 31, Generator 2198, Checker 98,
+  Repair 62) · cases 291/291 · locks **FAIL** only for `src/M2W.Checker/Shell.cs` and
+  `tests/M2W.Checker.Tests/AnchorContainmentTests.cs` (approved for Q-S1; owner re-tags at merge) · everything else
+  green.
+- Next: after the owner merges `gen/m4-r1` into `main`, merge `main` into `check/m4-qs1`, validate again on the
+  regenerated cases (including the clean-control zero-repair test) and report. (Renumbered from D-038 to D-039 at the
+  merge; the generator's R1 entry is D-038.)
+- Blockers: none (waiting for the generator merge for task 5).
 
 ### 2026-11-22 · owner · R1 written into AGREEMENT.md; lock moved; branches for the M4 gate work
 - R1 action 1 done. AGREEMENT.md has a new paragraph under the tolerance table: *"Roof steps below `minEdge`: roof

@@ -30,7 +30,7 @@ completes this file; until then, roles add entries as they find them.
   canopy, a raised slab, a cantilever), is filled from its roof down to the ground.
 - **How it shows:** status `partial`; a warning per block with the regions, their area and plan box, e.g. "block
   B02 has no support below part of it …: 1 region of 18 m² at [2, 10, 8, 13]"; the same in the `fillUnsupported`
-  operation (D-040).
+  operation (D-042).
 - **Why:** closed shells with a bottom at Z = 0 are what AGREEMENT.md asks for; true overhangs need a 3D boolean.
 - **Watch for:** volume and blockage under canopies are overstated by area × slab bottom height.
 
@@ -58,13 +58,13 @@ completes this file; until then, roles add entries as they find them.
   Which wall the fault moved is not knowable; when it moved the longer one, the footprint is off by depth × length.
 - **Margins seen:** worst 32 % of the footprint tolerance on the visible cases, 50 % on the unseen sets.
 
-### Report detail and object splits (D-039)
+### Report detail and object splits (D-041)
 
 - **What:** an object is split into parts only when it holds two or more separate solids that are each closed.
   An object with an open or broken surface stays one part, so for such input the report can still depend on how it
   was split into objects. `weld.count` counts duplicate vertices within each part.
 
-### Gap closing on curved outlines (D-038)
+### Gap closing on curved outlines (D-040)
 
 - **What:** walls are measured along the chord of a chain of nearly collinear edges. On a curved outline that
   bends more than 5 mm from its chords, a gap counts only if the edges themselves are closer than `minGap`.

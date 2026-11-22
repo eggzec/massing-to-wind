@@ -1,60 +1,68 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0390",
-  "seed": 1129924651,
+  "seed": 887463978,
   "faultsInjected": [
-    "overlap"
+    "stackedFloors",
+    "smallGap"
   ],
   "expected": {
-    "shellCount": 3,
+    "shellCount": 4,
     "shells": [
       {
-        "volume_m3": 28123.676,
-        "footprintArea_m2": 1138.76,
-        "maxHeight_m": 28,
-        "genus": 0,
-        "blocks": [
-          "B02",
-          "B03"
-        ],
-        "anchor_m": [
-          70.461,
-          45.472
-        ]
-      },
-      {
-        "volume_m3": 16229.59,
-        "footprintArea_m2": 1341.66,
-        "maxHeight_m": 14.5,
-        "genus": 1,
-        "blocks": [
-          "B01"
-        ],
-        "anchor_m": [
-          14.894,
-          96.03
-        ]
-      },
-      {
-        "volume_m3": 15575.49,
-        "footprintArea_m2": 494.46,
-        "maxHeight_m": 31.5,
+        "volume_m3": 24040.044,
+        "footprintArea_m2": 953.97,
+        "maxHeight_m": 25.2,
         "genus": 0,
         "blocks": [
           "B04"
         ],
         "anchor_m": [
-          116.972,
-          81.418
+          -40.374,
+          -48.631
+        ]
+      },
+      {
+        "volume_m3": 8854.56,
+        "footprintArea_m2": 491.92,
+        "maxHeight_m": 18,
+        "genus": 0,
+        "blocks": [
+          "B03"
+        ],
+        "anchor_m": [
+          -36.83,
+          -5.918
+        ]
+      },
+      {
+        "volume_m3": 8783.447,
+        "footprintArea_m2": 905.51,
+        "maxHeight_m": 9.7,
+        "genus": 0,
+        "blocks": [
+          "B01"
+        ],
+        "anchor_m": [
+          20.052,
+          -38.394
+        ]
+      },
+      {
+        "volume_m3": 4975.98,
+        "footprintArea_m2": 447.63,
+        "maxHeight_m": 13,
+        "genus": 0,
+        "blocks": [
+          "B02"
+        ],
+        "anchor_m": [
+          -4.524,
+          -24.362
         ]
       }
     ],
-    "mustMerge": [
-      [
-        "B02",
-        "B03"
-      ]
-    ],
+    "mustMerge": [],
     "mustStaySeparate": [
       [
         "B01",
@@ -62,15 +70,11 @@
       ],
       [
         "B01",
-        "B03"
+        "B04"
       ],
       [
         "B02",
-        "B04"
-      ],
-      [
-        "B03",
-        "B04"
+        "B03"
       ]
     ]
   },

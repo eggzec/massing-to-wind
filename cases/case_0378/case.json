@@ -13,7 +13,7 @@
     "minEdge": 0.25,
     "weld": 0.001,
     "minAngleDeg": 5,
-    "groundSnap": 0.5
+    "groundSnap": 0.25
   },
   "files": {
     "input": "input.obj"

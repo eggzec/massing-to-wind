@@ -4,7 +4,7 @@ namespace M2W.Repair.Steps;
 
 /// <summary>
 /// Splits an input object that holds several separate closed solids into one part per solid, so a model exported as
-/// one object is repaired and reported the same as the same model with one object per part (D-039).
+/// one object is repaired and reported the same as the same model with one object per part (D-041).
 ///
 /// Parts are found on a welded copy: polygons are joined across edges that exactly two polygons use (an edge where
 /// two touching solids meet is used by four and does not join them). Where two solids share a whole face (two

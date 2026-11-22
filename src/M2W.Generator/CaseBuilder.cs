@@ -35,6 +35,10 @@ public sealed class BuiltCase
     public required List<Block> CleanBlocks { get; init; }
     public required List<Block> ExpectedBlocks { get; init; }
 
+    /// <summary>The ground truth expected.json is computed from: the height field of <see cref="ExpectedBlocks"/>
+    /// after the roof-step rule (roof steps below minEdge raised to the higher roof, D-037).</summary>
+    public required HeightField ExpectedField { get; init; }
+
     /// <summary>The blocks as emitted: the clean blocks plus geometric faults (tiny steps), grid frame.</summary>
     public required List<Block> InputBlocks { get; init; }
 
@@ -62,6 +66,13 @@ public static class CaseBuilder
 
     /// <summary>Block pairs closer than this in different shells are listed in mustStaySeparate.</summary>
     public const double NearPair = 10.0;
+
+    /// <summary>roofStep single-fault steps as multiples of minEdge: three flushed, two kept (D-038).</summary>
+    public static readonly IReadOnlyList<double> RoofStepRatios = new[] { 0.4, 0.8, 0.96, 1.04, 1.5 };
+
+    /// <summary>Touching roof steps within this share of minEdge from minEdge itself are redrawn, so no answer
+    /// depends on rounding at the threshold (D-038).</summary>
+    public const double RoofStepBand = 0.025;
 
     public static BuiltCase Build(string caseId, long seed, Recipe recipe)
     {
@@ -92,6 +103,7 @@ public static class CaseBuilder
             if ((recipe.Has("floatingBlock") || recipe.Has("sunkBlock")) && r.Chance(0.3)) snap = r.Pick(new[] { 0.25, 1.0 });
             if (recipe.Has("duplicateVertices") && r.Chance(0.3)) weld = r.Pick(new[] { 0.0005, 0.005 });
             if (recipe.Has("sliver") && r.Chance(0.3)) minAngle = r.Pick(new[] { 3.0, 10.0 });
+            if (recipe.Has("roofStep") && r.Chance(0.3)) minEdge = r.Pick(new[] { 0.15, 0.4 });
         }
         return new Tolerances
         {
@@ -118,6 +130,12 @@ public static class CaseBuilder
             var (below, ratio) = GapChoice(r.Fork("gapChoice"), recipe);
             var gap = Math.Round(ratio * tol.MinGap, 4);
             groups.Add(Layouts.Gap(r.Fork("gap"), rules, gap, below));
+        }
+        if (recipe.Has("roofStep"))
+        {
+            var (ratio, kind) = RoofStepChoice(r.Fork("roofStepChoice"), recipe);
+            var step = Math.Round(ratio * tol.MinEdge, 3);
+            groups.Add(Layouts.RoofStep(r.Fork("roofStep"), rules, step, kind));
         }
         var layoutGroups = groups.Count;
         var singles = layoutGroups > 0 ? r.IntIn(0, 2) : r.IntIn(1, 4);
@@ -164,9 +182,11 @@ public static class CaseBuilder
         var expected = groups.SelectMany(g => g.Expected).ToList();
 
         // ---------------------------------------------------------------- validation
-        var hf = HeightField.Build(expected);
-        why = Validate(groups, clean, expected, hf, rules, tol);
+        var design = HeightField.Build(expected);
+        why = Validate(groups, clean, expected, design, rules, tol);
         if (why is not null) return null;
+        var hf = FlushRoofs(design, tol.MinEdge, out why);
+        if (hf is null) return null;
         var shells = hf.Shells();
         var blockComp = hf.BlockComponents();
 
@@ -194,6 +214,8 @@ public static class CaseBuilder
 
         // ---------------------------------------------------------------- emission
         var style = recipe.Kind == Recipe.Clean ? FaceStyle.Triangles : (r.Chance(0.55) ? FaceStyle.Polygons : FaceStyle.Triangles);
+        // A roof deck lower than minEdge would be triangulated into slivers along its walls; slivers are their own fault.
+        if (groups.Any(g => g.Relation == Relation.RoofStep && g.Variant.StartsWith("tier", StringComparison.Ordinal))) style = FaceStyle.Polygons;
         var floorBlocks = new HashSet<string>(StringComparer.Ordinal);
         if (recipe.Has("stackedFloors"))
         {
@@ -329,8 +351,17 @@ public static class CaseBuilder
                 Relation.Overlap => $"overlap: {names} ({g.Variant})",
                 Relation.Touching => $"touchingWalls: {names} ({g.Variant})",
                 Relation.GapBelow => $"smallGap: {names} gap {g.Gap:0.000} m = {g.Gap / tol.MinGap:0.00} × minGap, closed and merged",
+                Relation.RoofStep => $"roofStep: {names} ({g.Variant}) roofs {g.Roofs.Low:0.000} and {g.Roofs.High:0.000} m, step {g.Step:0.000} m = {g.Step / tol.MinEdge:0.00} × minEdge, " +
+                    (g.Step < tol.MinEdge ? "lower roof raised to the higher one" : "kept"),
                 _ => $"smallGap: {names} gap {g.Gap:0.000} m = {g.Gap / tol.MinGap:0.00} × minGap, left open",
             });
+        }
+
+        foreach (var (before, after) in design.Shells().Zip(shells))
+        {
+            var dv = after.Volume - before.Volume;
+            if (dv > 1e-6)
+                notes.Add($"roofFlush: {string.Join("+", after.Blocks)} roof steps below minEdge raised (AGREEMENT rule), volume {before.Volume:0.00} -> {after.Volume:0.00} m³ (+{100 * dv / before.Volume:0.000} %)");
         }
 
         var expectedSpec = ExpectedFrom(caseId, seed, recipe, tol, hf, shells, expected, site);
@@ -358,6 +389,7 @@ public static class CaseBuilder
             Groups = groups,
             CleanBlocks = clean,
             ExpectedBlocks = expected,
+            ExpectedField = hf,
             InputBlocks = input,
             CleanObjects = cleanObjects,
             FloorBlocks = floorBlocks,
@@ -390,6 +422,42 @@ public static class CaseBuilder
         }
         if (below) return (true, boundary ? 0.9 : r.Step(0.2, 0.85, 0.05));
         return (false, boundary ? 1.1 : r.Step(1.2, 2.0, 0.05));
+    }
+
+    /// <summary>roofStep step and kind. Single-fault cases: variants 0–3 at 0.4 × minEdge, 4–7 at 0.8 ×, 8–11 at
+    /// 0.96 ×, 12–15 at 1.04 ×, 16–19 at 1.5 ×; kinds rotate through touching, overlap and tier.</summary>
+    private static (double Ratio, string Kind) RoofStepChoice(Rng r, Recipe recipe)
+    {
+        if (recipe.Kind == Recipe.SingleFault)
+            return (RoofStepRatios[recipe.Variant / 4 % RoofStepRatios.Count], Layouts.RoofStepKinds[recipe.Variant % Layouts.RoofStepKinds.Count]);
+        return (r.Pick(RoofStepRatios), r.Pick(Layouts.RoofStepKinds));
+    }
+
+    /// <summary>
+    /// Applies the roof-step rule of AGREEMENT.md (D-037) to the corrected model. The agreement does not fix the order
+    /// in which regions are raised, so the flush is computed three ways and a layout whose answer depends on the order
+    /// is redrawn; so is one with a touching step within <see cref="RoofStepBand"/> of minEdge (D-038).
+    /// </summary>
+    private static HeightField? FlushRoofs(HeightField design, double minEdge, out string? why)
+    {
+        why = null;
+        var flushed = design.FlushRoofSteps(minEdge, HeightField.FlushOrder.Simultaneous);
+        foreach (var order in new[] { HeightField.FlushOrder.LowestFirst, HeightField.FlushOrder.HighestFirst })
+            if (!flushed.SameRoofs(design.FlushRoofSteps(minEdge, order)))
+            {
+                why = "roof flush depends on the order regions are raised";
+                return null;
+            }
+        foreach (var field in new[] { design, flushed })
+            foreach (var step in field.TouchingSteps())
+                if (Math.Abs(step - minEdge) < RoofStepBand * minEdge)
+                {
+                    why = $"touching roofs differ by {step} m, too close to minEdge {minEdge}";
+                    return null;
+                }
+        if (flushed.FindNonManifoldVertex() is string p) { why = "flushed: " + p; return null; }
+        if (flushed.FindRoofStep(minEdge) is string q) throw new InvalidOperationException("roof flush left a step: " + q);
+        return flushed;
     }
 
     private static string ShortEdgeKind(Rng r, Recipe recipe)
@@ -510,7 +578,7 @@ public static class CaseBuilder
         {
             var g = groups[gi];
             var comps = g.Expected.Select(x => comp[x.Name]).Distinct().ToList();
-            var merged = g.Relation is Relation.Overlap or Relation.Touching or Relation.GapBelow;
+            var merged = g.Relation is Relation.Overlap or Relation.Touching or Relation.GapBelow or Relation.RoofStep;
             if (merged && comps.Count != 1) return $"{g.Relation} group did not merge";
             if (g.Relation == Relation.GapAbove && comps.Count != 2) return "gap-above pair merged";
             foreach (var c in comps)

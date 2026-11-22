@@ -1,45 +1,81 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0120",
-  "seed": 1437863656,
+  "seed": 164480865,
   "faultsInjected": [
-    "sunkBlock"
+    "overlap",
+    "shortEdge"
   ],
   "expected": {
-    "shellCount": 2,
+    "shellCount": 3,
     "shells": [
       {
-        "volume_m3": 18201.753,
-        "footprintArea_m2": 1100.67,
-        "maxHeight_m": 19.5,
-        "genus": 0,
-        "blocks": [
-          "B02"
-        ],
-        "anchor_m": [
-          102.1,
-          69.65
-        ]
-      },
-      {
-        "volume_m3": 6556.425,
-        "footprintArea_m2": 304.95,
-        "maxHeight_m": 21.5,
+        "volume_m3": 37922.4,
+        "footprintArea_m2": 687,
+        "maxHeight_m": 55.2,
         "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          54.85,
-          69.65
+          -36.113,
+          -53.375
+        ]
+      },
+      {
+        "volume_m3": 17256.96,
+        "footprintArea_m2": 647.35,
+        "maxHeight_m": 28.8,
+        "genus": 0,
+        "blocks": [
+          "B04"
+        ],
+        "anchor_m": [
+          -0.632,
+          -59.867
+        ]
+      },
+      {
+        "volume_m3": 16147.134,
+        "footprintArea_m2": 748.74,
+        "maxHeight_m": 25.9,
+        "genus": 0,
+        "blocks": [
+          "B02",
+          "B03"
+        ],
+        "anchor_m": [
+          2.045,
+          -18.248
         ]
       }
     ],
-    "mustMerge": [],
+    "mustMerge": [
+      [
+        "B02",
+        "B03"
+      ]
+    ],
     "mustStaySeparate": [
       [
         "B01",
         "B02"
+      ],
+      [
+        "B01",
+        "B03"
+      ],
+      [
+        "B01",
+        "B04"
+      ],
+      [
+        "B02",
+        "B04"
+      ],
+      [
+        "B03",
+        "B04"
       ]
     ]
   },
@@ -48,7 +84,7 @@
     "outwardNormals": true,
     "noSelfIntersections": true,
     "minGap_m": 1,
-    "minEdge_m": 0.25
+    "minEdge_m": 0.15
   },
   "tolerances": {
     "volumeRel": 0.01,

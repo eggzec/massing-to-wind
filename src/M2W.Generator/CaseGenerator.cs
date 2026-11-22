@@ -11,7 +11,8 @@ namespace M2W.Generator;
 public sealed record PlannedCase(string CaseId, long Seed, Recipe Recipe);
 
 /// <summary>
-/// The exam: 10 clean controls, 20 single-fault cases for each of the 12 v0.1 faults, and 40 combined cases.
+/// The exam: 10 clean controls, 20 single-fault cases for each of the 13 faults (the 12 of v0.1 and roofStep), and
+/// 40 combined cases.
 /// The order is shuffled with the master seed and case IDs are given in that order, so a case ID says nothing
 /// about its faults and a different seed gives a different mapping.
 /// </summary>
@@ -47,8 +48,8 @@ public static class CasePlan
     }
 
     /// <summary>
-    /// 40 combinations of 2–4 faults: consecutive windows over shuffled permutations of the 12 faults, so every
-    /// fault appears about ten times and no window repeats a fault.
+    /// 40 combinations of 2–4 faults: consecutive windows over shuffled permutations of the 13 faults, so every
+    /// fault appears about nine times and no window repeats a fault.
     /// </summary>
     private static List<Recipe> Combinations(Rng r)
     {

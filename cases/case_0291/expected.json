@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1",
   "caseId": "case_0291",
-  "seed": 743016425,
+  "seed": 794088028,
   "faultsInjected": [
     "shortEdge"
   ],
@@ -9,16 +9,16 @@
     "shellCount": 1,
     "shells": [
       {
-        "volume_m3": 29016.64,
-        "footprintArea_m2": 1247.6,
-        "maxHeight_m": 25.7,
-        "genus": 1,
+        "volume_m3": 7011.16,
+        "footprintArea_m2": 539.32,
+        "maxHeight_m": 13,
+        "genus": 0,
         "blocks": [
           "B01"
         ],
         "anchor_m": [
-          28.129,
-          23.494
+          9.646,
+          55.317
         ]
       }
     ],
