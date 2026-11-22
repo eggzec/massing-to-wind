@@ -1,6 +1,6 @@
 # Massing-to-Wind
 
-![ci](https://github.com/rehman-saif/massing-to-wind/actions/workflows/ci.yml/badge.svg)
+![ci](https://github.com/eggzec/massing-to-wind/actions/workflows/ci.yml/badge.svg)
 
 **Automatic repair of generative-design building massings into simulation-ready geometry, in pure C#.**
 

@@ -20,6 +20,13 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-22 · owner · Repository moved to the `eggzec` organisation; links updated
+- The repository moved from `rehman-saif/massing-to-wind` to `eggzec/massing-to-wind`. The local `origin` remote
+  was updated by the owner.
+- Links changed to the new address: the CI badge in `README.md`, `$ciUrl` in `demo/run-demo.ps1`, and
+  `RepositoryUrl` in `Directory.Build.props`. Older PROGRESS entries keep the old address as history.
+- validate: **GREEN**, 311/311 (`out/summary.json`); locks OK.
+
 ### 2026-11-22 · owner · Pre-public audit and cleanup (branch `chore/pre-public-cleanup`)
 - **Audit** of the working tree and the full history (all branches and tags) before the repository goes public:
   - no credentials, tokens, keys or passwords; no local machine paths; no file ever committed and later removed;

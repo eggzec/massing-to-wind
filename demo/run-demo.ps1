@@ -24,7 +24,7 @@ Set-Location $repo
 $demo = Join-Path $repo "out\demo"
 $caseDir = Join-Path $repo "cases\$Case"
 $outCase = Join-Path $demo $Case
-$ciUrl = "https://github.com/rehman-saif/massing-to-wind/actions/workflows/ci.yml"
+$ciUrl = "https://github.com/eggzec/massing-to-wind/actions/workflows/ci.yml"
 
 function Show-Step([int]$n, [string]$title, [string]$line) {
     Write-Host ""
