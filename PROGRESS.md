@@ -14,10 +14,31 @@ _None open._
 | M1 Foundations | ✅ Passed (gate approved, `lock-v0.1` tagged) | 0/1 (no solver or checker yet, expected) | 2026-11-18 |
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Criteria met, ready for midpoint review | 252/291 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-19 |
-| M4 Hard faults | ✅ Criteria met; feature-freeze gate held for owner decisions R1 and Q-S1 (approved, being implemented) | 291/291 (unseen seeds 870/870; hidden 290/290) | 2026-11-21 |
-| M5 Package | In progress: solver problems 1–3 done (`solve/m5`); `roofStep` check waits for the R1 merge | 291/291 (unseen 870/870) | 2026-11-22 |
+| M4 Hard faults | ✅ Criteria met; R1 and Q-S1 merged. Feature-freeze gate: waits for a new private hidden set and the owner benchmarks on `main` | 311/311 (roofStep 29/29; hidden 290/290 on the old set) | 2026-11-22 |
+| M5 Package | In progress: solver problems 1–3 merged; README, CI and demo not started | 311/311 | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · owner · Solver M5 problems 1–3 merged; all three branches in `main`
+- `solve/m5` merged: `main` merged into it first (conflicts in PROGRESS.md and DECISIONS.md were additions on both
+  sides; kept both, newest first), the solver's decisions renumbered **D-038/D-039/D-040 → D-040/D-041/D-042**
+  (references in KNOWN_LIMITATIONS.md and three code comments updated), then fast-forwarded into `main`
+  (`10bbfa0`). No locked path changed; `lock-v0.1` stays at `5c5c7a6`.
+- Solver task 4 (`roofStep`), run by the owner at the merge: **29/29 pass**, worst margin 0.0 % of tolerance (exact).
+  Worst margin over all 311 cases: 19 % of the footprint tolerance (a jog case, D-034).
+- Output guard on cases the solver had not seen: all 311 `repaired.obj` from `solve/m5` are byte-identical to those
+  of the previous solver on the regenerated cases.
+- Decision numbers are now unique: D-037 owner (R1), D-038 generator (R1), D-039 checker (Q-S1), D-040–D-042 solver
+  (runtime, object split, located warnings and `fillUnsupported`).
+- Next:
+  - **M4 gate (owner):** generate a new private hidden set (the old one predates `roofStep`); run it and the owner
+    benchmarks on `main`; approve the feature freeze.
+  - **M5:** README with results table; CI (validate on push and a determinism check); demo; owner's design-tool
+    exports into the benchmarks. Minor solver items: shell order still depends on the object split on real data
+    (geometry identical), and the `GapCloser.FullScan` static test switch.
+- validate (`scripts/validate.ps1`, on this commit): build ✅ · tests 2929/2929 (Geometry 88, Cli 31,
+  Generator 2636, Checker 98, Repair 76) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
 
 ### 2026-11-22 · owner · Checker Q-S1 merged; Q-S1 closed; lock moved
 - `check/m4-qs1` merged: `main` merged into it first (conflicts in PROGRESS.md and DECISIONS.md were additions on
