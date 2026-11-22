@@ -5,6 +5,9 @@
 Massing-to-Wind: a pure C# (.NET 8) engine that repairs building massing geometry from generative design tools
 so it is ready for wind simulation. Read `AGREEMENT.md` before doing anything. It is the contract between agents.
 
+v0.1 is closed (tag `v0.1.0`). For v0.2 work, read `docs/HANDOFF-v0.2.md` next: state, how work is done here, the
+v0.2 backlog and known pitfalls. The plan is the v0.2 part of `MILESTONES.md`.
+
 ## Roles
 
 There are three agent roles. Each has a brief in `.claude/agents/`:

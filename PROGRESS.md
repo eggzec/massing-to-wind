@@ -15,9 +15,43 @@ _None open._
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Passed (midpoint review folded into the M4 gate review) | 252/291 at M3 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-22 |
 | M4 Hard faults | ✅ Passed (gate approved, feature freeze) | 311/311 visible · private hidden set 310/310 · owner benchmarks pass | 2026-11-22 |
-| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; `m2w render` + showcase images and CI (Linux, Windows, determinism, cross-OS) merged; CI green on GitHub (Linux, Windows, cross-OS identical; D-051); `solve/m5` merged (output order, options object, README, KNOWN_LIMITATIONS); demo runner on `main` (D-053); demo recording (owner) pending | 311/311 | 2026-11-22 |
+| M5 Package | ✅ Closed, v0.1 tagged `v0.1.0`: README, KNOWN_LIMITATIONS, CI green (Linux, Windows, cross-OS identical), demo runner (D-053). Demo recording (owner) still to do; it is an asset, not part of the tag | 311/311 visible · 930/930 unseen | 2026-11-22 |
+| v0.2 | Not started. Plan drafted in `MILESTONES.md` (V0–V5), handoff in `docs/HANDOFF-v0.2.md`; starts when the owner approves it at the V0 gate | — | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · owner · v0.1 closed (tag `v0.1.0`); v0.2 plan drafted; handoff written; `setup.sh` worktree trap fixed
+- **`scripts/setup.sh` fix** (bug found by the solver in M5, open since).
+  - The problem: the first-time git step tested `[ ! -d .git ]`. In a git worktree `.git` is a file, so setup
+    re-initialised git there and ran `git add -A` and `git commit` with the message "chore: initial skeleton",
+    committing an agent's uncommitted work on its branch. It then failed on `git tag lock-v0.1`.
+    - Reproduced in a scratch worktree with a detached HEAD: "Reinitialized existing Git repository", exit 1.
+  - The fix: the step now runs only when `git rev-parse --is-inside-work-tree` fails, that is, in no repository
+    at all.
+  - Checked:
+    - a worktree with uncommitted work: exit 0, no commit, the work untouched;
+    - a fresh folder with no repository: `main`, `lock-v0.1` and the role branches are created as before.
+  - `setup.ps1` was already safe (`Test-Path .git` is true for a file too).
+- **`MILESTONES.md`:** v0.1 items ticked. The demo recording stays open: the runner is ready, and the recording is
+  an asset outside the tag. A **v0.2 draft** is added: V0 opening, V1 validity-only grading, V2 minimum angle,
+  V3 sloped roofs, V4 overhangs with a 3D union, V5 package. Each has acceptance criteria, a gate and a regression
+  guard. The owner approves, changes or cuts it at the V0 gate.
+- **`docs/HANDOFF-v0.2.md`:** one page for agents starting v0.2:
+  - reading order;
+  - state at `v0.1.0`;
+  - repository map;
+  - how work is done here (branches, validate, merge practice, output guard);
+  - the v0.2 backlog, with sources and the locked files each item touches;
+  - pitfalls found in v0.1.
+
+  `CLAUDE.md` now points to it.
+- **v0.1 closed:** annotated tag `v0.1.0` on this commit, pushed. The v0.1 feature freeze ends with the tag. v0.2
+  work starts at the V0 gate. Locks stay as they are (`lock-v0.1` at `5c5c7a6`) until the owner moves them for a
+  v0.2 milestone.
+- validate before tagging: `scripts/validate.ps1` and `scripts/validate.sh` (Git Bash) both: build ✅ · tests
+  2953/2953 (Geometry 88, Cli 48, Generator 2636, Checker 98, Repair 83) · cases 311/311 · locks OK ·
+  **VALIDATE: GREEN**.
+- Blockers: none.
 
 ### 2026-11-22 · owner · Demo runner (`demo/`, D-053)
 - New: `demo/run-demo.ps1` (six steps, pauses for recording) and `demo/paraview_scene.py` (ParaView scene: input and

@@ -9,7 +9,9 @@ command -v dotnet >/dev/null || { echo "Install the .NET 8 SDK first: https://do
 for p in src/*/*.csproj tests/*/*.csproj; do dotnet sln M2W.sln add "$p"; done
 dotnet build M2W.sln
 
-if [ ! -d .git ]; then
+# First-time git only when this folder is in no repository at all. Not `[ -d .git ]`: in a git worktree `.git` is a
+# file, and the old test re-initialised the worktree and committed whatever was in it with the message below.
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git init -b main
   git add -A
   git commit -m "chore: initial skeleton and interface agreement v0.1"
