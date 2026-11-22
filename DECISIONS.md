@@ -13,6 +13,23 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-051 · 2026-11-22 · owner (M5) · `global.json` pins the .NET 8 SDK
+- Context: CI had never passed on GitHub. The runners have the .NET 10 SDK preinstalled; without `global.json`,
+  `dotnet` picks the newest SDK, so CI compiled with C# 14 (`LangVersion` is `latest` in `Directory.Build.props`)
+  while every local run used SDK 8.0.428 and C# 12. C# 14 binds `array.Reverse()` to the in-place, `void`
+  `MemoryExtensions.Reverse(Span<T>)` instead of LINQ, so `Face.Reversed()` (`src/M2W.Geometry/Mesh.cs`) did not
+  compile (CS1503) on Linux or Windows; `RenderTests.cs:37` and `Step1CleanupTests.cs:144` would fail next. The
+  statement-form calls (`x.Reverse();`) are all on `List<T>`, so no output could have changed silently.
+- Choice: `global.json` with SDK `8.0.400`, `rollForward: latestFeature`, no prereleases. Every build (local, Linux
+  CI, Windows CI) uses an 8.0 SDK of feature band 400 or later and the same C# version. `ci.yml` unchanged: its
+  `setup-dotnet` already installs 8.0.x.
+- Alternatives: `LangVersion 12` (the SDK, and so the analyzers and build tasks, would still differ between machines);
+  rewrite the three calls as `Enumerable.Reverse(…)` only (fixes this break, not the next language change); move to
+  .NET 10 (a platform change under the feature freeze).
+- Why: the determinism and cross-OS checks (D-009, D-045) only mean something if every machine builds with the same
+  toolchain. Pinning makes CI build what the agents tested.
+- Revisit if: the project moves to .NET 10 (then also write the three calls as `Enumerable.Reverse`, v0.2).
+
 ## D-050 · 2026-11-22 · checker (M5) · `validate.ps1` finds Git Bash by walking up from `git.exe`, never plain `bash`
 - Context: D-046 relies on `validate.ps1` running `check-locks.sh` through Git Bash on the Windows CI job. The lookup
   went exactly two folders up from `git.exe`, which is right only for `Git\cmd\git.exe`. Git for Windows also has

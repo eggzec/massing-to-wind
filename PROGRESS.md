@@ -19,6 +19,21 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-22 · owner · CI: `global.json` pins the .NET 8 SDK (CI had never compiled)
+- First CI run after the M5 merges (`45015063357`) failed in all three jobs. Read with `gh`: one cause, and every
+  earlier run on GitHub failed the same way (no successful run in the last 30). The runners have the .NET 10 SDK;
+  without `global.json` it was used, so CI compiled C# 14 while all local runs used SDK 8.0.428 (C# 12). C# 14 binds
+  `int[].Reverse()` to the `void` span method: CS1503 at `src/M2W.Geometry/Mesh.cs:28` on Linux and Windows. The
+  validate jobs therefore wrote no `out/hashes.txt`, and `cross-OS` had nothing to compare.
+- Fix (D-051): new `global.json`, SDK `8.0.400`, `rollForward: latestFeature`. No code change, no locked path.
+  Checked every `.Reverse()`: two more array calls (`RenderTests.cs:37`, `Step1CleanupTests.cs:144`) would have
+  failed to compile next; the statement-form calls are all on `List<T>`, so no output changed silently.
+- Not known yet: everything after the build (tests, validate, determinism, the Linux/Windows hash comparison) has
+  never run on GitHub. Result of the next run below or in the next entry.
+- validate (`scripts/validate.ps1`, SDK 8.0.428 via `global.json`): build ✅ · tests 2946/2946 (Geometry 88, Cli 48,
+  Generator 2636, Checker 98, Repair 76) · cases 311/311 · locks OK · **VALIDATE: GREEN**.
+- Blockers: none.
+
 ### 2026-11-22 · owner · M5 review; `gen/m5` and `check/m5` merged
 - **Independent review** of the three M5 branches (generator, checker, solver). Checked independently rather than
   from the PROGRESS entries:
