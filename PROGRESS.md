@@ -15,9 +15,48 @@ _None open._
 | M2 Test cases and checker | ✅ Passed (gate approved, `cases/` and checker locked, `lock-v0.1` moved) | 0/291 (stub solver, expected until M3) | 2026-11-18 |
 | M3 Core repair | ✅ Passed (midpoint review folded into the M4 gate review) | 252/291 at M3 (M3 faults without M4 faults 195/195; clean 10/10) | 2026-11-22 |
 | M4 Hard faults | ✅ Passed (gate approved, feature freeze) | 311/311 visible · private hidden set 310/310 · owner benchmarks pass | 2026-11-22 |
-| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; README, CI and demo not started | 311/311 | 2026-11-22 |
+| M5 Package | In progress (under feature freeze): solver problems 1–3 merged; before/after images and `m2w render` on `gen/m5` (not merged); README, CI and demo not started | 311/311 | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-22 · generator · M5: `m2w render` and the README's before/after images
+- Branch `gen/m5` from `main` (`8fe8bfd`). Under the feature freeze: no change to case generation, faults, expected
+  answers or `cases/`. Only a rendering tool and images are added; no locked path is touched.
+- **`m2w render <obj> --out <svg> [--frame <other.obj>] [--title <text>]`** (new: `src/M2W.Cli/Render/SvgRenderer.cs`;
+  `CliApp` gains the command and one usage line; existing commands and public signatures are unchanged). D-043.
+  - Camera and drawing:
+    - fixed axonometric camera (30°, 45°), polygons painted back to front, flat shading with one fixed light, thin
+      edges;
+    - `--frame` fits the view to both files, so a pair shares viewBox, scale and position.
+  - Input files: one colour per object, see-through; free edges in red; flipped faces in magenta. Flipped means a
+    face that disagrees with its neighbours, or a whole object that is inside out.
+  - Repaired files (`shell_NNN`): one opaque colour per shell; the same defect markers would show if any were left.
+  - Determinism: two decimals, invariant culture, LF, no ids or dates. Coplanar triangles are merged, so the largest
+    SVG over all visible cases is 94 KB.
+  - Sweep over all 311 visible cases, inputs and repaired:
+    - 622 renders, no failures;
+    - every repaired file shows 0 free edges and 0 flipped faces;
+    - markers appear on exactly the inputs whose faults include `openSurface` or `flippedFaces`.
+- **Showcase** (`docs/images/`, D-044): `showcase-{1..4}-{before,after}.svg` and `showcase.json`. The names are the
+  ones the solver's README embeds.
+  - 1 `case_0301`: stacked floors and overlap (also openSurface and roofStep), 29 objects become 4 shells.
+  - 2 `case_0177`: a 0.2 m gap is closed; one block stays separate.
+  - 3 `case_0183`: inside out, 3 missing faces, floating 0.71 m.
+  - 4 `case_0235`: a 0.24 m roof step is flushed.
+  - Volume and footprint come from each `result.json`; all four pass with repaired totals equal to expected
+    (case_0301 volume 59631.466 vs 59631.465 m³).
+  - Regenerate after validate: `M2W_WRITE_SHOWCASE=1 dotnet test tests/M2W.Cli.Tests --filter Showcase`. Two runs
+    are byte-identical.
+- **Tests** (`tests/M2W.Cli.Tests`, 31 → 48):
+  - the five the brief asks for: byte-identical SVG; a cube shows 3 faces; a hole shows red free edges; one flipped
+    face is marked; `--frame` gives the same viewBox, and the same pixels as a drawing of both meshes;
+  - plus: an inside-out object, duplicate vertices, a zero-area sliver, stacked floors, number format, bad
+    arguments, and a check of the committed showcase files.
+- `.gitattributes`: `*.svg text eol=lf`, so the committed images stay byte-identical on Windows.
+- validate (`scripts/validate.ps1`): build ✅ · tests 2946/2946 (Geometry 88, Cli 48, Generator 2636, Checker 98,
+  Repair 76) · cases 311/311 (`out/summary.json`) · locks OK · **VALIDATE: GREEN**.
+- Next: the solver's README can embed the images; owner review and merge of `gen/m5`.
+- Blockers: none.
 
 ### 2026-11-22 · owner · M4 gate: approved, feature freeze
 - **M4 criteria met** (MILESTONES.md): gap closing below `minGap`, sliver and short-edge removal, combined-fault

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using M2W.Cli.Render;
 using M2W.Geometry;
 using M2W.Geometry.Json;
 using M2W.Geometry.Models;
@@ -13,6 +14,7 @@ namespace M2W.Cli;
 /// <item><c>check</c>: 0 all checks pass, 1 a check failed, 2 missing file (or no checker yet).</item>
 /// <item><c>run-all</c>: 0 every case was run and summary.json written (whatever the pass rate), 2 bad input.</item>
 /// <item><c>generate</c>: 0 cases written, 2 bad arguments or no generator yet.</item>
+/// <item><c>render</c>: 0 SVG written, 2 bad arguments or unreadable OBJ.</item>
 /// </list>
 /// </summary>
 public sealed class CliApp
@@ -39,6 +41,7 @@ public sealed class CliApp
 
     public int Run(string[] args)
     {
+        if (args.Length > 0 && args[0] == "render") return Render(args);
         if (!TryParse(args, out var cmd, out var dir, out var outDir, out var seed, out var problem))
         {
             if (problem is not null) _err.WriteLine($"m2w: {problem}");
@@ -72,6 +75,9 @@ public sealed class CliApp
               m2w repair   <caseDir>  [--out DIR]    repair one case (solver)
               m2w check    <caseDir>  [--out DIR]    grade one case (checker)
               m2w run-all  <casesDir> [--out DIR]    repair + check every folder containing case.json, write DIR/summary.json
+              m2w render   <obj> --out <svg> [--frame <other.obj>] [--title <text>]
+                                                  draw an axonometric SVG (before/after images); --frame fits the view
+                                                  to both files so a pair shares scale and position
             """);
         return BadInput;
     }
@@ -106,6 +112,56 @@ public sealed class CliApp
             }
         }
         return true;
+    }
+
+    // ---------------------------------------------------------------- render
+
+    private int Render(string[] args)
+    {
+        string? obj = null, svg = null, frame = null, title = null;
+        for (var i = 1; i < args.Length; i++)
+        {
+            var a = args[i];
+            if (a is "--out" or "--frame" or "--title")
+            {
+                if (i + 1 >= args.Length) { _err.WriteLine($"m2w: {a} needs a value"); return Usage(); }
+                var v = args[++i];
+                if (a == "--out") svg = v; else if (a == "--frame") frame = v; else title = v;
+            }
+            else if (obj is null && !a.StartsWith("--", StringComparison.Ordinal)) obj = a;
+            else { _err.WriteLine($"m2w: unexpected argument '{a}' for 'render'"); return Usage(); }
+        }
+        if (obj is null || svg is null)
+        {
+            _err.WriteLine("m2w: render needs <obj> and --out <svg>");
+            return Usage();
+        }
+
+        Mesh mesh;
+        Mesh? frameMesh = null;
+        try
+        {
+            mesh = ObjReader.ReadFile(obj);
+            if (frame is not null) frameMesh = ObjReader.ReadFile(frame);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or ObjFormatException)
+        {
+            _err.WriteLine($"m2w render: bad input: {ex.Message}");
+            return BadInput;
+        }
+
+        var result = SvgRenderer.Render(mesh, new RenderOptions
+        {
+            Title = title ?? Path.GetFileName(obj),
+            Frame = frameMesh,
+        });
+        var dir = Path.GetDirectoryName(Path.GetFullPath(svg));
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        var bytes = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(result.Svg);
+        File.WriteAllBytes(svg, bytes);
+        _out.WriteLine($"render: wrote {svg} ({bytes.Length} bytes; {result.Style.ToString().ToLowerInvariant()} style, " +
+                       $"{result.Objects} object(s), {result.Polygons} polygon(s), {result.FreeEdges} free edge(s), {result.FlippedFaces} flipped face(s))");
+        return Ok;
     }
 
     // ---------------------------------------------------------------- generate

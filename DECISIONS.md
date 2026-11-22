@@ -13,6 +13,80 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-044 · 2026-11-22 · generator (M5) · Showcase: four visible cases, written by a test-hosted writer
+- Context: the README needs before/after images from visible cases that show clearly different repairs, plus
+  `docs/images/showcase.json` with the volume and footprint from each case's `result.json`.
+- Choice: four passing cases, each picked after looking at rendered candidates:
+  1. `case_0301`: overlap, stackedFloors, openSurface, roofStep. 29 floor objects and 2 deleted faces become 4
+     shells; its 0.375 m roof step is above `minEdge`, so it is kept.
+  2. `case_0177`: smallGap. A 0.2 m gap is closed into one shell; the third block stays separate. Chosen over
+     `case_0385`, which only merges, because it shows both sides of `minGap`.
+  3. `case_0183`: openSurface, flippedFaces (inside out), floatingBlock. It shows both defect markers at once.
+  4. `case_0235`: roofStep. A 0.24 m step (below `minEdge` 0.25 m) is flushed to 10.84 m; the 16 m U-block stays a
+     shell of its own. Flushed rather than kept, so the change is visible.
+  - Each pair is rendered with `m2w render`, each image framed by the other.
+  - `showcase.json` is an array of `{ n, caseId, faults, caption, before, after, shells, volume_m3,
+    footprintArea_m2, expectedVolume_m3, expectedFootprintArea_m2, pass }`.
+    - Volumes and footprints are totals over the shells, parsed from the `volume_m3` and `footprintArea_m2` check
+      details (`shell_NNN: repaired vs expected`). The checks' own `value`/`limit` hold only the worst shell.
+    - Faults come from `expected.json`.
+    - Captions are hand-written and checked against `cases/index.json` notes and `report.json`.
+  - The writer lives in `tests/M2W.Cli.Tests/ShowcaseTests.cs`. It runs only with `M2W_WRITE_SHOWCASE=1`, after
+    `scripts/validate`; otherwise that test checks the committed files: names, size < 300 KB, LF, shared viewBox,
+    faults equal to `expected.json`, and the four kinds of repair.
+- Alternatives:
+  - a script per platform: bash and PowerShell cannot write the JSON the same way;
+  - an `m2w showcase` command: the brief adds only `render`;
+  - comparing the committed images with `out/` in every test run: a later solver fix would turn validate red in
+    a project the solver does not own.
+- Why: deterministic and reproducible with one command; only visible material; no new CLI surface; no
+  cross-role test failures.
+- Revisit if: the solver's output for these cases changes (rerun the writer), or the README wants different cases.
+
+## D-043 · 2026-11-22 · generator (M5) · `m2w render`: a deterministic axonometric SVG with defect markers
+- Context: the README needs before/after images. These must be pure managed C#, byte-identical per input, under
+  300 KB, and show stacked floors, overlaps, open surfaces and flipped faces.
+- Choice: `src/M2W.Cli/Render/SvgRenderer.cs`, plus a `render` command added in front of the existing argument
+  parsing; the other commands are unchanged.
+  - **Camera:** fixed axonometric, 30° elevation, 45° azimuth, from the south-west. The view is fitted to the
+    referenced vertices of the file and of `--frame`. The union is symmetric, so a pair gets the same viewBox and
+    the same pixel per point. Width is 960 px, the drawing is at most 720 px high, and coordinates are relative to
+    the box centre (far coordinates are safe).
+  - **Style** comes from the object names (AGREEMENT.md). If every object is `shell_NNN`, the output style is used:
+    one opaque colour per shell, back faces culled. Otherwise the input style: one colour per object, fill opacity
+    0.5 in front and 0.22 behind, so floors and overlaps show through.
+  - **Shading:** flat, from the face normal, with one fixed light (−0.15, −0.45, 1). Back faces are shaded from the
+    side seen.
+  - **Edge analysis** runs on vertices welded within 5 mm (drawing only; the generator's duplicate jitter is at most
+    1 mm per axis).
+    - **Free edges** are counted per object: an object with exactly one face on an edge. They are drawn in red on
+      top.
+    - **Flipped faces:** winding is propagated inside each object across edges where it has exactly two faces. In
+      each patch, the class that makes Σ area·n·(c − p) positive is kept; for a closed patch that is 3 × the volume
+      for any p. Both one wrong face and a whole inside-out object are marked in magenta. A flat patch falls back
+      to the larger area.
+    - **Zero-area faces** (degenerate slivers) stay in the topology but are never drawn or marked.
+    - Per object, because where stacked floors meet, every slab edge has four faces.
+  - **Drawing:** coplanar neighbours of one object with agreeing winding are merged into outlines (holes with
+    even-odd fill, collinear points dropped). Polygons are painted back to front by centroid depth (ties: file
+    order).
+  - **Determinism:** two decimals in the invariant culture, LF, no BOM, no ids, dates or paths; the title defaults
+    to the file name. `*.svg` is LF in `.gitattributes`.
+- Checked on all 311 visible cases (inputs and repaired, 622 renders):
+  - no failures; largest SVG 94 KB;
+  - every repaired file shows 0 free edges and 0 flipped faces;
+  - every input whose faults include `openSurface` or `flippedFaces` shows a marker, and no other input does.
+  - A first version dropped zero-area faces and showed false free edges in 5 sliver cases; fixed, with a test.
+- Alternatives:
+  - a z-buffer raster (PNG): bigger files, and an image encoder would be needed;
+  - BSP or Newell ordering: exact, but much more code for massings where the centroid order checked out on the
+    showcase (one suspicious spot was ray-cast and is correct);
+  - free edges counted over all objects: a floor missing its slab would hide behind the floor below;
+  - flips by area minority only: misses inside-out objects (the generator turns about 30 % of the objects it flips inside out).
+- Why: small, readable vector images with exact numbers; the defect markers follow the faults the generator injects.
+- Revisit if: painter's order visibly fails (interpenetrating or cyclically overlapping faces): split polygons or
+  add a z-buffer. Also if large meshes need simplification beyond coplanar merging.
+
 ## D-042 · 2026-11-22 · solver (M5) · Region warnings carry a plan box and an area or count; one new op, `fillUnsupported`
 - Context: with a district in one object, "block X has no support below part of it" could not be found (owner
   benchmark, 2026-11-21, problem 2). The owner approved adding fields, not renaming or removing any.

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 795.00" width="960" height="795.00">
+<rect width="960" height="795.00" fill="#ffffff"/>
+<text x="24.00" y="32" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#1f2933">2 · case_0177 · input: smallGap</text>
+<g stroke="#1f2933" stroke-width="0.6" stroke-linejoin="round">
+<path class="b" d="M624.87 177.01L524.73 227.08L524.73 114.07L624.87 64.00Z" fill="#45743e" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M936.00 332.57L624.87 177.01L624.87 64.00L936.00 219.56Z" fill="#3c6037" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M524.73 227.08L624.87 177.01L936.00 332.57L835.85 382.64Z" fill="#569a4c" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M835.85 269.64L936.00 219.56L624.87 64.00L524.73 114.07Z" fill="#569a4c" fill-opacity="0.50"/>
+<path class="f" d="M524.73 227.08L835.85 382.64L835.85 269.64L524.73 114.07Z" fill="#3c6037" fill-opacity="0.50"/>
+<path class="f" d="M835.85 382.64L936.00 332.57L936.00 219.56L835.85 269.64Z" fill="#45743e" fill-opacity="0.50"/>
+<path class="b" d="M622.06 460.85L564.67 432.15L564.67 343.95L622.06 372.65Z" fill="#364c63" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M179.28 624.85L564.67 432.15L622.06 460.85L236.67 653.54Z" fill="#4b749f" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M564.67 432.15L179.28 624.85L179.28 536.65L564.67 343.95Z" fill="#3e5a78" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M236.67 653.54L622.06 460.85L622.06 372.65L236.67 565.34Z" fill="#3e5a78" fill-opacity="0.50"/>
+<path class="f" d="M236.67 565.34L622.06 372.65L564.67 343.95L179.28 536.65Z" fill="#4b749f" fill-opacity="0.50"/>
+<path class="b" d="M235.54 654.10L178.16 625.41L178.16 549.61L235.54 578.31Z" fill="#885625" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M179.28 624.85L236.67 653.54L236.67 565.34L179.28 536.65Z" fill="#364c63" fill-opacity="0.50"/>
+<path class="b" d="M178.16 625.41L24.00 702.49L24.00 626.69L178.16 549.61Z" fill="#a96827" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M24.00 702.49L178.16 625.41L235.54 654.10L81.39 731.18Z" fill="#e6882a" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M81.39 655.39L235.54 578.31L178.16 549.61L24.00 626.69Z" fill="#e6882a" fill-opacity="0.50"/>
+<path class="f" d="M81.39 731.18L235.54 654.10L235.54 578.31L81.39 655.39Z" fill="#a96827" fill-opacity="0.50"/>
+<path class="f" d="M24.00 702.49L81.39 731.18L81.39 655.39L24.00 626.69Z" fill="#885625" fill-opacity="0.50"/>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#52606d">
+<text x="24.00" y="779.00">colour = input object (3), see-through</text>
+<line x1="360" y1="774.50" x2="390" y2="774.50" stroke="#e3121b" stroke-width="2.4" stroke-linecap="round"/>
+<text x="398" y="779.00">free edges (open surface): 0</text>
+<rect x="640" y="768.00" width="14" height="13" fill="#c026d3" fill-opacity="0.8"/>
+<text x="662" y="779.00">flipped faces: 0</text>
+</g>
+</svg>

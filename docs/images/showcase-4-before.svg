@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 532.00" width="960" height="532.00">
+<rect width="960" height="532.00" fill="#ffffff"/>
+<text x="24.00" y="32" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#1f2933">4 · case_0235 · input: roofStep</text>
+<g stroke="#1f2933" stroke-width="0.6" stroke-linejoin="round">
+<path class="b" d="M910.56 223.83L665.23 230.52L503.98 234.92L503.98 75.09L665.23 70.69L910.56 64.00Z" fill="#3d5977" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M917.22 284.88L910.56 223.83L910.56 64.00L917.22 125.04Z" fill="#334558" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M671.89 291.57L917.22 284.88L917.22 125.04L671.89 131.74Z" fill="#3d5977" fill-opacity="0.50"/>
+<path class="b" d="M522.45 404.23L510.64 295.97L503.98 234.92L665.23 230.52L910.56 223.83L917.22 284.88L671.89 291.57L683.70 399.83L929.03 393.14L936.00 457.07L690.67 463.76L529.42 468.16Z" fill="#4b749f" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M379.90 336.50L24.00 346.20L24.00 240.31L379.90 230.61Z" fill="#44733e" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M252.05 339.98L113.84 343.75L113.84 235.47L252.05 231.70Z" fill="#a86727" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M683.70 399.83L671.89 291.57L671.89 131.74L683.70 240.00Z" fill="#334558" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M503.98 234.92L510.64 295.97L522.45 404.23L529.42 468.16L529.42 308.32L522.45 244.40L510.64 136.13L503.98 75.09Z" fill="#334558" fill-opacity="0.50"/>
+<path class="b" d="M24.00 346.20L379.90 336.50L388.19 412.51L32.29 422.22Z" fill="#569a4c" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M388.19 412.51L379.90 336.50L379.90 230.61L388.19 306.63Z" fill="#375533" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="b" d="M113.84 343.75L252.05 339.98L263.36 443.64L125.15 447.41Z" fill="#e6882a" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M529.42 308.32L690.67 303.93L936.00 297.24L929.03 233.31L683.70 240.00L671.89 131.74L917.22 125.04L910.56 64.00L665.23 70.69L503.98 75.09L510.64 136.13L522.45 244.40Z" fill="#4b749f" fill-opacity="0.50"/>
+<path class="f" d="M24.00 346.20L32.29 422.22L32.29 316.33L24.00 240.31Z" fill="#375533" fill-opacity="0.50"/>
+<path class="b" d="M263.36 443.64L252.05 339.98L252.05 231.70L263.36 335.36Z" fill="#774d24" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M113.84 343.75L125.15 447.41L125.15 339.13L113.84 235.47Z" fill="#774d24" fill-opacity="0.50"/>
+<path class="f" d="M32.29 316.33L388.19 306.63L379.90 230.61L24.00 240.31Z" fill="#569a4c" fill-opacity="0.50"/>
+<path class="b" d="M929.03 393.14L683.70 399.83L683.70 240.00L929.03 233.31Z" fill="#3d5977" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M125.15 339.13L263.36 335.36L252.05 231.70L113.84 235.47Z" fill="#e6882a" fill-opacity="0.50"/>
+<path class="f" d="M32.29 422.22L388.19 412.51L388.19 306.63L32.29 316.33Z" fill="#44733e" fill-opacity="0.50"/>
+<path class="b" d="M936.00 457.07L929.03 393.14L929.03 233.31L936.00 297.24Z" fill="#334558" fill-opacity="0.22" stroke-opacity="0.45"/>
+<path class="f" d="M125.15 447.41L263.36 443.64L263.36 335.36L125.15 339.13Z" fill="#a86727" fill-opacity="0.50"/>
+<path class="f" d="M529.42 468.16L690.67 463.76L936.00 457.07L936.00 297.24L690.67 303.93L529.42 308.32Z" fill="#3d5977" fill-opacity="0.50"/>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#52606d">
+<text x="24.00" y="516.00">colour = input object (3), see-through</text>
+<line x1="360" y1="511.50" x2="390" y2="511.50" stroke="#e3121b" stroke-width="2.4" stroke-linecap="round"/>
+<text x="398" y="516.00">free edges (open surface): 0</text>
+<rect x="640" y="505.00" width="14" height="13" fill="#c026d3" fill-opacity="0.8"/>
+<text x="662" y="516.00">flipped faces: 0</text>
+</g>
+</svg>

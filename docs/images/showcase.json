@@ -1,0 +1,71 @@
+[
+  {
+    "n": 1,
+    "caseId": "case_0301",
+    "faults": [
+      "overlap",
+      "stackedFloors",
+      "openSurface",
+      "roofStep"
+    ],
+    "caption": "Stacked floors and overlapping blocks (29 input objects, 2 missing faces) become 4 closed shells; a 0.375 m roof step (above minEdge) is kept.",
+    "before": "docs/images/showcase-1-before.svg",
+    "after": "docs/images/showcase-1-after.svg",
+    "shells": 4,
+    "volume_m3": 59631.466,
+    "footprintArea_m2": 3849.31,
+    "expectedVolume_m3": 59631.465,
+    "expectedFootprintArea_m2": 3849.31,
+    "pass": true
+  },
+  {
+    "n": 2,
+    "caseId": "case_0177",
+    "faults": [
+      "smallGap"
+    ],
+    "caption": "A 0.2 m gap (below minGap 1 m) is closed, so two blocks become one shell; the block farther away stays separate.",
+    "before": "docs/images/showcase-2-before.svg",
+    "after": "docs/images/showcase-2-after.svg",
+    "shells": 2,
+    "volume_m3": 28183.256,
+    "footprintArea_m2": 1964.56,
+    "expectedVolume_m3": 28183.256,
+    "expectedFootprintArea_m2": 1964.56,
+    "pass": true
+  },
+  {
+    "n": 3,
+    "caseId": "case_0183",
+    "faults": [
+      "openSurface",
+      "flippedFaces",
+      "floatingBlock"
+    ],
+    "caption": "An inside-out block with 3 missing faces, floating 0.71 m above the ground: faces turned outward, holes closed, set on the ground.",
+    "before": "docs/images/showcase-3-before.svg",
+    "after": "docs/images/showcase-3-after.svg",
+    "shells": 1,
+    "volume_m3": 14371.596,
+    "footprintArea_m2": 694.28,
+    "expectedVolume_m3": 14371.596,
+    "expectedFootprintArea_m2": 694.28,
+    "pass": true
+  },
+  {
+    "n": 4,
+    "caseId": "case_0235",
+    "faults": [
+      "roofStep"
+    ],
+    "caption": "Two roofs 0.24 m apart (below minEdge 0.25 m) are flushed to 10.84 m and joined; the taller block stays a shell of its own.",
+    "before": "docs/images/showcase-4-before.svg",
+    "after": "docs/images/showcase-4-after.svg",
+    "shells": 2,
+    "volume_m3": 21513.163,
+    "footprintArea_m2": 1494.69,
+    "expectedVolume_m3": 21513.163,
+    "expectedFootprintArea_m2": 1494.69,
+    "pass": true
+  }
+]
