@@ -11,9 +11,14 @@ Step "locks"
 $gitBash = $null
 $gitExe = Get-Command git -ErrorAction SilentlyContinue
 if ($gitExe) {
-    $gitRoot = Split-Path (Split-Path $gitExe.Source -Parent) -Parent   # ...\Git\cmd\git.exe -> ...\Git
-    foreach ($candidate in @((Join-Path $gitRoot "bin\bash.exe"), (Join-Path $gitRoot "usr\bin\bash.exe"))) {
-        if (Test-Path $candidate) { $gitBash = $candidate; break }
+    # git.exe may be Git\cmd, Git\bin or Git\mingw64\bin (PATH order decides). Walk up from its folder, at most
+    # three levels, and take the first bin\bash.exe (then usr\bin\bash.exe): all three resolve to Git\bin\bash.exe.
+    $dir = Split-Path $gitExe.Source -Parent
+    for ($i = 0; $i -lt 3 -and $dir -and -not $gitBash; $i++) {
+        foreach ($candidate in @((Join-Path $dir "bin\bash.exe"), (Join-Path $dir "usr\bin\bash.exe"))) {
+            if (Test-Path $candidate) { $gitBash = $candidate; break }
+        }
+        $dir = Split-Path $dir -Parent
     }
 }
 if ($gitBash) {

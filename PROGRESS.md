@@ -19,6 +19,30 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-22 · checker · M5 follow-up: `validate.ps1` finds Git Bash from any `git.exe` location (branch `check/m5`, not merged)
+- Changed: `scripts/validate.ps1` only (the Git Bash lookup in the locks step). No change to `check-locks.sh`,
+  `ci.yml`, the determinism scripts or any locked path. D-050.
+- The lookup used to go exactly two folders up from `git.exe`, which works only for `Git\cmd\git.exe`. It now walks
+  up from the folder holding `git.exe`, at most three levels, and takes the first `bin\bash.exe` (then
+  `usr\bin\bash.exe`). Still never plain `bash`; still `locks: FAIL - Git Bash not found next to git.exe; …` and
+  exit 1 when none is found.
+- **Local proof** (Windows 11, Windows PowerShell 5.1; `git = …` printed inside the PowerShell that ran validate):
+  | Started as | `git = ` | locks | result |
+  | --- | --- | --- | --- |
+  | PowerShell, usual PATH | `C:\Program Files\Git\cmd\git.exe` | `locks: OK` | `VALIDATE: GREEN`, 311/311, exit 0 |
+  | Git Bash: `powershell -NoProfile …` | `C:\Program Files\Git\mingw64\bin\git.exe` | `locks: OK` | `VALIDATE: GREEN`, 311/311, exit 0 |
+  | PowerShell, `Git\bin` first on PATH | `C:\Program Files\Git\bin\git.exe` | `locks: OK` | `VALIDATE: GREEN`, 311/311, exit 0 |
+  | PowerShell, `Git\mingw64\bin` first on PATH | `C:\Program Files\Git\mingw64\bin\git.exe` | `locks: OK` | `VALIDATE: GREEN`, 311/311, exit 0 |
+  | PowerShell, a copied `git.exe` in a scratch folder outside the repo first on PATH | `…\scratchpad\fakegit\git.exe` | `locks: FAIL - Git Bash not found next to git.exe; install Git for Windows or run scripts/validate.sh in Git Bash` | `VALIDATE: RED`, exit 1 (build, tests, 311/311 cases all passed) |
+  - Before the fix, rows 2–4 were `locks: FAIL` (reviewer's reproduction of row 2 on all three M5 branches).
+  - `scripts/validate.sh` (Git Bash): `locks: OK`, `VALIDATE: GREEN`, exit 0.
+- Pass counts (`out/summary.json`): 311/311 cases. Tests: Geometry 88, Cli 31, Repair 76, Generator 2636, Checker 98,
+  all passing.
+- Owner checklist for `check/m5` (entry below): unchanged. `locks: OK` in the `validate (windows-latest)` log no
+  longer depends on which `git.exe` the runner puts first on PATH.
+- Not tested locally: the GitHub Windows runner itself (its PATH puts `Git\bin` first, which is row 3 above).
+- Next: owner review and merge of `check/m5`. Blockers: none.
+
 ### 2026-11-22 · checker · M5 CI on GitHub Actions with a determinism check (branch `check/m5`, not merged)
 - Feature freeze respected: no change to `src/M2W.Checker/` or its tests. Changed: `.github/workflows/ci.yml`,
   `scripts/check-locks.sh` (one opt-in); new: `scripts/determinism.sh`, `scripts/determinism.ps1`. D-045 (CI design),

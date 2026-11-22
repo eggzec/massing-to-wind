@@ -13,6 +13,22 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-050 · 2026-11-22 · checker (M5) · `validate.ps1` finds Git Bash by walking up from `git.exe`, never plain `bash`
+- Context: D-046 relies on `validate.ps1` running `check-locks.sh` through Git Bash on the Windows CI job. The lookup
+  went exactly two folders up from `git.exe`, which is right only for `Git\cmd\git.exe`. Git for Windows also has
+  `Git\bin\git.exe` and `Git\mingw64\bin\git.exe`; when PATH puts one of those first (started from Git Bash, or
+  GitHub's Windows runners, which put `Git\bin` on PATH), locks went `FAIL - Git Bash not found` with all code green.
+- Choice: from the folder holding `git.exe`, walk up at most three levels and take the first `bin\bash.exe`, then
+  `usr\bin\bash.exe`. `Git\cmd`, `Git\bin` and `Git\mingw64\bin` all resolve to `Git\bin\bash.exe`. If none is found,
+  `locks: FAIL` with the same message as before, exit 1; never skip, never pass.
+- Alternatives: plain `bash` from PATH (on Windows it can be WSL's `bash.exe`, whose git cannot read Windows
+  worktrees, so locks would fail or check the wrong thing); `git --exec-path` (gives `mingw64\libexec\git-core`, still
+  needs a fixed walk up); a registry lookup of the Git install (absent for portable Git and not obviously present on
+  runners); hard-coding `C:\Program Files\Git` (breaks for other install folders).
+- Why: the bash must come from the same Git install as the `git` in use, and three levels covers every `git.exe`
+  Git for Windows ships while staying close enough not to pick up an unrelated `bin\bash.exe`.
+- Revisit if: Git for Windows changes its folder layout, or CI moves to a Windows image without Git for Windows.
+
 ## D-046 · 2026-11-22 · checker (M5) · CI fails on a missing `lock-v0.1` tag; locally it still only warns
 - Context: `check-locks.sh` skips with a WARNING (exit 0) when the tag is missing (D-026), so a CI checkout without
   tags, or a repository where the tag was never pushed, would go GREEN without checking any lock.
