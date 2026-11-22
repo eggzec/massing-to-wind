@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 827.00" width="960" height="827.00">
+<rect width="960" height="827.00" fill="#ffffff"/>
+<text x="24.00" y="32" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#1f2933">3 · case_0183 · input: openSurface, flippedFaces, floatingBlock</text>
+<g stroke="#1f2933" stroke-width="0.6" stroke-linejoin="round">
+<path class="x" d="M936.00 133.30L784.30 64.00L784.30 389.98L936.00 459.28Z" fill="#71227a" fill-opacity="0.80" stroke="#c026d3" stroke-width="1.2"/>
+<path class="x" d="M401.24 751.95L548.42 671.40L936.00 459.28L784.30 389.98L396.72 602.10L171.18 499.07L24.00 579.62L249.54 682.65Z" fill="#b726c9" fill-opacity="0.80" stroke="#c026d3" stroke-width="1.2"/>
+<path class="x" d="M396.72 276.12L171.18 173.09L171.18 499.07L396.72 602.10Z" fill="#71227a" fill-opacity="0.80" stroke="#c026d3" stroke-width="1.2"/>
+<path class="x" d="M249.54 356.67L24.00 253.64L171.18 173.09L396.72 276.12L784.30 64.00L936.00 133.30L548.42 345.41L401.24 425.96Z" fill="#b726c9" fill-opacity="0.80" stroke="#c026d3" stroke-width="1.2"/>
+<path class="x" d="M24.00 253.64L249.54 356.67L401.24 425.96L401.24 751.95L249.54 682.65L24.00 579.62Z" fill="#71227a" fill-opacity="0.80" stroke="#c026d3" stroke-width="1.2"/>
+</g>
+<path class="free" d="M401.24 425.96L548.42 345.41M401.24 425.96L401.24 751.95M548.42 345.41L936.00 133.30M936.00 133.30L936.00 459.28M784.30 64.00L396.72 276.12M784.30 64.00L784.30 389.98M396.72 276.12L396.72 602.10M171.18 173.09L24.00 253.64M171.18 173.09L171.18 499.07M24.00 253.64L24.00 579.62M401.24 751.95L548.42 671.40M548.42 671.40L936.00 459.28M784.30 389.98L396.72 602.10M171.18 499.07L24.00 579.62" fill="none" stroke="#e3121b" stroke-width="2.4" stroke-linecap="round"/>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#52606d">
+<text x="24.00" y="811.00">colour = input object (1), see-through</text>
+<line x1="360" y1="806.50" x2="390" y2="806.50" stroke="#e3121b" stroke-width="2.4" stroke-linecap="round"/>
+<text x="398" y="811.00">free edges (open surface): 14</text>
+<rect x="640" y="800.00" width="14" height="13" fill="#c026d3" fill-opacity="0.8"/>
+<text x="662" y="811.00">flipped faces: 5</text>
+</g>
+</svg>

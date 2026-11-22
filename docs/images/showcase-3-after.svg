@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 827.00" width="960" height="827.00">
+<rect width="960" height="827.00" fill="#ffffff"/>
+<text x="24.00" y="32" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#1f2933">3 · case_0183 · repaired: 1 closed shell</text>
+<g stroke="#1f2933" stroke-width="0.6" stroke-linejoin="round">
+<path class="f" d="M936.00 144.48L401.24 437.14L401.24 763.13L936.00 470.46Z" fill="#3e5a78"/>
+<path class="f" d="M784.30 75.18L396.72 287.30L171.18 184.27L24.00 264.82L401.24 437.14L936.00 144.48Z" fill="#4b749f"/>
+<path class="f" d="M401.24 437.14L24.00 264.82L24.00 590.80L401.24 763.13Z" fill="#374d64"/>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#52606d">
+<text x="24.00" y="811.00">colour = shell (1)</text>
+<line x1="360" y1="806.50" x2="390" y2="806.50" stroke="#e3121b" stroke-width="2.4" stroke-linecap="round"/>
+<text x="398" y="811.00">free edges (open surface): 0</text>
+<rect x="640" y="800.00" width="14" height="13" fill="#c026d3" fill-opacity="0.8"/>
+<text x="662" y="811.00">flipped faces: 0</text>
+</g>
+</svg>
