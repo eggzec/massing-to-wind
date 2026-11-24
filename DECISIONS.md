@@ -13,6 +13,33 @@ Template:
 - Revisit if: the condition that would change this
 -->
 
+## D-057 · 2026-11-24 · shared (CLI) · `m2w repair model.obj` without a case.json
+- Context: repairing one model needed a folder and a hand-written `case.json`. The owner approved accepting an OBJ
+  directly (2026-11-24).
+- Choice: if the path is an `.obj` file, m2w builds the same `CaseSpec` a `case.json` would hold: `caseId` from the
+  file name, `origin` from `--origin X,Y,Z` (default 0,0,0), tolerances from `--min-gap`, `--min-edge`,
+  `--ground-snap`, `--weld`, `--min-angle` (AGREEMENT defaults). Case folders work as before; these options are
+  refused there, so `case.json` stays the only source of its settings. `cellSize` has no option: the engine does
+  not use it. A run whose output would overwrite its own input is refused. No file format changes, so
+  `schemaVersion` stays 0.1, as in D-037.
+- Alternatives: options overriding `case.json` (two sources for one setting); guessing the origin from the model
+  (the same site would shift between design options); writing a `case.json` next to the user's model.
+- Why: the same engine, output and exit codes with one command and no setup. A test checks that the bytes equal the
+  case-folder run.
+- Revisit if: people need to repair several same-named models into one output folder (then add a name option).
+
+## D-056 · 2026-11-24 · shared (CLI) · m2w is packed as the .NET tool `MassingToWind.Tool`
+- Context: `dotnet run --project src/M2W.Cli -- ...` was the only documented way to run m2w.
+- Choice: `PackAsTool` in `M2W.Cli.csproj`; every other project is `IsPackable=false`. `scripts/install-tool` packs the
+  checkout with a time-stamped pre-release version and installs it globally. Version 0.1.1: additions to v0.1, not the
+  v0.2 milestones. `RollForward=Major`, so a newer .NET runtime is enough. Publishing to NuGet is a later step.
+  `--help`, `--version`, per-command help, specific argument errors and a result line from `repair` came with it; the
+  parser stays hand-written.
+- Alternatives: single-file executables only (68 MB each; they also build from this project with `dotnet publish -r
+  <rid> --self-contained -p:PublishSingleFile=true`); `System.CommandLine` (a dependency for five commands).
+- Why: one 0.3 MB package for all platforms, installed and updated with one command.
+- Revisit if: users without .NET need m2w (then add executables to the GitHub releases).
+
 ## D-055 · 2026-11-22 · owner · Banner and icon in the eggzec house style, SVG as the source
 - Context: the repository moved to the `eggzec` organisation, whose repositories open with a 2400 × 800 pixel-art
   banner in `docs/assets/<name>-banner.png` and keep a matching `<name>-icon.{svg,png}`.

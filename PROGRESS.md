@@ -4,7 +4,10 @@
 
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
-_None open._
+- **`lock-v0.1` for the approved AGREEMENT.md edit (D-057).** The last commit on `cli/m2w-tool` adds the approved
+  `m2w repair <model.obj>` row to the command-line table and changes nothing else. Until the owner moves the tag,
+  `locks` reports FAIL for `AGREEMENT.md` (and CI would too). On that commit: `git tag -f lock-v0.1`, and after the
+  merge `git push -f origin lock-v0.1`.
 
 
 ## Current status
@@ -19,6 +22,20 @@ _None open._
 | v0.2 | Not started. Plan drafted in `MILESTONES.md` (V0–V5), handoff in `docs/HANDOFF-v0.2.md`; starts when the owner approves it at the V0 gate | — | 2026-11-22 |
 
 ## Log (newest first)
+
+### 2026-11-24 · shared (CLI) · m2w as an installed command; repair an OBJ directly (branch `cli/m2w-tool`)
+- Owner approved three changes (2026-11-24): pack m2w as a .NET tool, improve the command line, and accept an OBJ
+  without a `case.json` (D-056, D-057).
+- `M2W.Cli` packs as `MassingToWind.Tool` 0.1.1; `scripts/install-tool.{sh,ps1}` build and install it for the current
+  user. Both scripts run on Windows; the installed `m2w` was used from a folder outside the repository.
+- `m2w repair model.obj [--origin X,Y,Z] [--min-gap M] ...`; case folders work as before. `repaired.obj` for
+  `case_0007` is byte-identical both ways (test).
+- `--help` (general and per command), `--version`, specific argument errors, a result line from `repair`; `repair`
+  refuses to overwrite its own input.
+- README "Quick start" and "Repair your own model" use `m2w`. 30 new tests in `tests/M2W.Cli.Tests/DirectObjTests.cs`;
+  no existing test changed.
+- validate: **GREEN**, 311/311 (`out/summary.json`); locks OK (before the AGREEMENT.md commit).
+- Next: owner moves `lock-v0.1` for the AGREEMENT.md commit (see "Waiting for owner"), then NuGet publishing.
 
 ### 2026-11-24 · owner · README rewritten for a first-time reader, led by the geometry repair
 - `README.md`: opens with what the repair does, a fault → fix table and before/after images; new sections on repairing

@@ -40,11 +40,11 @@ the repository. Each brief gives your branch, worktree and the D-numbers you may
 | Path | Owner | What |
 | --- | --- | --- |
 | `src/M2W.Geometry/` | shared | Mesh types, OBJ and JSON input/output. Changing a public signature needs the owner |
-| `src/M2W.Cli/` | shared | `m2w generate / repair / check / run-all / render` |
+| `src/M2W.Cli/` | shared | `m2w generate / repair / check / run-all / render`; packed as the .NET tool `MassingToWind.Tool` (D-056) |
 | `src/M2W.Generator/`, `cases/` | generator | Seeded cases with injected faults and exact expected answers |
 | `src/M2W.Checker/` | checker | Grades `repaired.obj` against `expected.json` and the validity rules (locked) |
 | `src/M2W.Repair/` | solver | The repair engine; `README.md` is also the solver's |
-| `scripts/` | shared | `setup`, `validate`, `determinism` (`.sh` and `.ps1`), `check-locks.sh` |
+| `scripts/` | shared | `setup`, `validate`, `determinism`, `install-tool` (`.sh` and `.ps1`), `check-locks.sh` |
 | `.github/workflows/ci.yml` | checker (M5) | CI: Linux and Windows jobs, plus the cross-OS hash comparison |
 | `demo/` | owner | Demo runner and ParaView scene (D-053), not part of the build or CI |
 | `docs/images/` | generator | README before/after SVGs and `showcase.json` |

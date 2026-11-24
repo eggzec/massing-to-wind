@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using M2W.Cli.Render;
 using M2W.Geometry;
 using M2W.Geometry.Json;
@@ -41,22 +42,41 @@ public sealed class CliApp
 
     public int Run(string[] args)
     {
-        if (args.Length > 0 && args[0] == "render") return Render(args);
-        if (!TryParse(args, out var cmd, out var dir, out var outDir, out var seed, out var problem))
+        if (args.Length == 0)
         {
-            if (problem is not null) _err.WriteLine($"m2w: {problem}");
-            return Usage();
+            _err.WriteLine(CliHelp.For(null));
+            return BadInput;
         }
+
+        var cmd = args[0];
+        if (cmd is "--version")
+        {
+            _out.WriteLine($"m2w {Version}");
+            return Ok;
+        }
+        if (cmd is "help" || args.Any(a => a is "--help" or "-h"))
+        {
+            _out.WriteLine(CliHelp.For(args.FirstOrDefault(CliHelp.IsCommand)));
+            return Ok;
+        }
+        if (!CliHelp.IsCommand(cmd))
+        {
+            _err.WriteLine($"m2w: unknown command '{cmd}'");
+            _err.WriteLine(CliHelp.For(null));
+            return BadInput;
+        }
+
+        if (cmd == "render") return Render(args);
+        if (CliArgs.Parse(cmd, args, out var problem) is not { } a) return Usage(cmd, problem);
 
         try
         {
             return cmd switch
             {
-                "generate" => Generate(dir, seed),
-                "repair" => Repair(dir, outDir),
-                "check" => Check(dir, outDir),
-                "run-all" => RunAll(dir, outDir),
-                _ => Usage(),
+                "generate" => Generate(a.Path, a.Seed),
+                "repair" => Repair(a),
+                "check" => Check(a.Path, a.Out),
+                _ => RunAll(a.Path, a.Out),
             };
         }
         catch (Exception ex)
@@ -67,51 +87,16 @@ public sealed class CliApp
         }
     }
 
-    private int Usage()
-    {
-        _err.WriteLine("""
-            usage:
-              m2w generate <casesDir> [--seed N]     build test cases (generator)
-              m2w repair   <caseDir>  [--out DIR]    repair one case (solver)
-              m2w check    <caseDir>  [--out DIR]    grade one case (checker)
-              m2w run-all  <casesDir> [--out DIR]    repair + check every folder containing case.json, write DIR/summary.json
-              m2w render   <obj> --out <svg> [--frame <other.obj>] [--title <text>]
-                                                  draw an axonometric SVG (before/after images); --frame fits the view
-                                                  to both files so a pair shares scale and position
-            """);
-        return BadInput;
-    }
+    /// <summary>The package version, without the commit hash the SDK appends after '+'.</summary>
+    private static string Version =>
+        typeof(CliApp).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
 
-    private static bool TryParse(string[] args, out string cmd, out string dir, out string outDir, out long seed, out string? problem)
+    private int Usage(string cmd, string problem)
     {
-        cmd = dir = "";
-        outDir = DefaultOut;
-        seed = DefaultSeed;
-        problem = null;
-        if (args.Length < 2) return false;
-        cmd = args[0];
-        dir = args[1];
-        for (var i = 2; i < args.Length; i++)
-        {
-            var a = args[i];
-            if (a is "--out" && i + 1 < args.Length && cmd is "repair" or "check" or "run-all")
-                outDir = args[++i];
-            else if (a is "--seed" && i + 1 < args.Length && cmd is "generate")
-            {
-                if (!long.TryParse(args[++i], System.Globalization.NumberStyles.AllowLeadingSign,
-                        System.Globalization.CultureInfo.InvariantCulture, out seed))
-                {
-                    problem = $"--seed needs an integer, got '{args[i]}'";
-                    return false;
-                }
-            }
-            else
-            {
-                problem = $"unexpected argument '{a}' for '{cmd}'";
-                return false;
-            }
-        }
-        return true;
+        _err.WriteLine($"m2w {cmd}: {problem}");
+        _err.WriteLine(CliHelp.Usage(cmd));
+        _err.WriteLine($"m2w {cmd} --help shows the options.");
+        return BadInput;
     }
 
     // ---------------------------------------------------------------- render
@@ -124,18 +109,14 @@ public sealed class CliApp
             var a = args[i];
             if (a is "--out" or "--frame" or "--title")
             {
-                if (i + 1 >= args.Length) { _err.WriteLine($"m2w: {a} needs a value"); return Usage(); }
+                if (i + 1 >= args.Length) return Usage("render", $"{a} needs a value");
                 var v = args[++i];
                 if (a == "--out") svg = v; else if (a == "--frame") frame = v; else title = v;
             }
             else if (obj is null && !a.StartsWith("--", StringComparison.Ordinal)) obj = a;
-            else { _err.WriteLine($"m2w: unexpected argument '{a}' for 'render'"); return Usage(); }
+            else return Usage("render", $"unexpected argument '{a}'");
         }
-        if (obj is null || svg is null)
-        {
-            _err.WriteLine("m2w: render needs <obj> and --out <svg>");
-            return Usage();
-        }
+        if (obj is null || svg is null) return Usage("render", "needs <model.obj> and --out <picture.svg>");
 
         Mesh mesh;
         Mesh? frameMesh = null;
@@ -181,23 +162,89 @@ public sealed class CliApp
 
     // ---------------------------------------------------------------- repair
 
-    private int Repair(string caseDir, string outDir)
+    private int Repair(CliArgs a)
     {
-        CaseSpec spec;
+        if (!File.Exists(a.Path))
+        {
+            if (!Directory.Exists(a.Path))
+            {
+                _err.WriteLine($"m2w repair: bad input: no such file or folder: {a.Path}");
+                return BadInput;
+            }
+            if (a.HasModelOptions)
+                return Usage("repair", "--origin and tolerances are for an .obj file; for a case folder, set them in its case.json");
+            return RepairCase(a.Path, a.Out, announce: true);
+        }
+
+        if (!Path.GetExtension(a.Path).Equals(".obj", StringComparison.OrdinalIgnoreCase))
+        {
+            _err.WriteLine($"m2w repair: bad input: not an .obj file or a case folder: {a.Path}");
+            return BadInput;
+        }
+
+        // The same settings a case.json would hold (AGREEMENT.md), taken from the command line instead.
+        var spec = new CaseSpec
+        {
+            SchemaVersion = SchemaVersions.Current,
+            CaseId = Path.GetFileNameWithoutExtension(a.Path),
+            Units = "m",
+            Origin = a.Origin ?? Vec3.Zero,
+            Tolerances = a.Tolerances,
+            Files = new CaseFileNames { Input = Path.GetFileName(a.Path) },
+        };
+        var problems = spec.Validate();
+        if (problems.Count > 0)
+        {
+            _err.WriteLine($"m2w repair {a.Path}: bad input: {string.Join("; ", problems)}");
+            return BadInput;
+        }
+
         Mesh input;
         try
         {
+            input = ObjReader.ReadFile(a.Path);
+        }
+        catch (ObjFormatException ex)
+        {
+            _err.WriteLine($"m2w repair {a.Path}: bad input: {ex.Message}");
+            return BadInput;
+        }
+        return RepairMesh(spec, input, a.Path, a.Out, announce: true);
+    }
+
+    private int RepairCase(string caseDir, string outDir, bool announce)
+    {
+        CaseSpec spec;
+        Mesh input;
+        string inputPath;
+        try
+        {
             spec = CaseSpec.Load(Path.Combine(caseDir, CaseFiles.Case));
-            var inputPath = Path.Combine(caseDir, spec.Files.Input);
+            inputPath = Path.Combine(caseDir, spec.Files.Input);
             input = ObjReader.ReadFile(inputPath);
         }
         catch (Exception ex) when (ex is ModelValidationException or FileNotFoundException or DirectoryNotFoundException or ObjFormatException)
         {
             _err.WriteLine($"m2w repair {caseDir}: bad input: {ex.Message}");
+            if (announce && !File.Exists(Path.Combine(caseDir, CaseFiles.Case)))
+                _err.WriteLine("to repair a model without a case.json, give the .obj file instead of its folder");
+            return BadInput;
+        }
+        return RepairMesh(spec, input, inputPath, outDir, announce);
+    }
+
+    private int RepairMesh(CaseSpec spec, Mesh input, string inputPath, string outDir, bool announce)
+    {
+        var caseOut = Path.Combine(outDir, spec.CaseId);
+        var repairedPath = Path.Combine(caseOut, CaseFiles.Repaired);
+        var reportPath = Path.Combine(caseOut, CaseFiles.Report);
+        // The output folder is cleared below, so a model that is itself an earlier output must not be in the way.
+        if (Path.GetFullPath(inputPath).Equals(Path.GetFullPath(repairedPath), StringComparison.OrdinalIgnoreCase))
+        {
+            _err.WriteLine($"m2w repair {inputPath}: bad input: the output would overwrite the input; choose another --out");
             return BadInput;
         }
 
-        var caseOut = Path.Combine(outDir, spec.CaseId);
         Directory.CreateDirectory(caseOut);
         // Remove the previous run's output so a stale repaired.obj or result.json can never be graded or counted.
         foreach (var stale in new[] { CaseFiles.Repaired, CaseFiles.Report, CaseFiles.Result })
@@ -213,12 +260,25 @@ public sealed class CliApp
             return Failed;
         }
 
-        if (outcome.Repaired is not null) ObjWriter.WriteFile(outcome.Repaired, Path.Combine(caseOut, CaseFiles.Repaired));
-        M2WJson.WriteFile(outcome.Report, Path.Combine(caseOut, CaseFiles.Report));
+        if (outcome.Repaired is not null) ObjWriter.WriteFile(outcome.Repaired, repairedPath);
+        M2WJson.WriteFile(outcome.Report, reportPath);
 
         foreach (var w in outcome.Report.Warnings) _err.WriteLine($"m2w repair {spec.CaseId}: warning: {w}");
+        if (announce)
+        {
+            var before = $"{Count(input.Objects.Count, "object")}, {Count(Faces(input), "face")}";
+            var after = outcome.Repaired is null ? "no output"
+                : $"{Count(outcome.Report.ShellCount, "shell")}, {Count(Faces(outcome.Repaired), "triangle")}";
+            _out.WriteLine($"{outcome.Report.Status.ToString().ToLowerInvariant()}: {before} -> {after} ({outcome.Report.Runtime_ms} ms)");
+            if (outcome.Repaired is not null) _out.WriteLine($"  {repairedPath}");
+            _out.WriteLine($"  {reportPath}");
+        }
         return outcome.Report.Status == RepairStatus.Repaired ? Ok : Failed;
     }
+
+    private static int Faces(Mesh m) => m.Objects.Sum(o => o.Faces.Count);
+
+    private static string Count(int n, string what) => $"{n} {what}{(n == 1 ? "" : "s")}";
 
     private static List<string> CheckOutcome(CaseSpec spec, RepairOutcome? outcome)
     {
@@ -328,7 +388,7 @@ public sealed class CliApp
         foreach (var d in dirs)
         {
             var rel = CaseDiscovery.RelativePath(root, d);
-            var repairExit = Repair(d, outDir);
+            var repairExit = RepairCase(d, outDir, announce: false);
             var checkExit = CheckCase(d, outDir, out var result);
 
             string caseId;

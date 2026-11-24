@@ -79,7 +79,19 @@ work on Windows, Linux and macOS.
 ```bash
 git clone https://github.com/eggzec/massing-to-wind.git
 cd massing-to-wind
-dotnet run --project src/M2W.Cli -- repair cases/_example/case_0007
+bash scripts/install-tool.sh
+```
+
+In Windows PowerShell, use this as the last line instead:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-tool.ps1
+```
+
+This installs the command `m2w` for your user account. It works from any folder:
+
+```bash
+m2w repair cases/_example/case_0007
 ```
 
 The example is a tower made of six stacked floor boxes, 0.3 m away from a second block, in map coordinates. `m2w`
@@ -93,50 +105,55 @@ turns these 7 boxes (42 faces) into one closed solid of 12 triangles and writes 
 You can also draw a quick picture without a 3D viewer:
 
 ```bash
-dotnet run --project src/M2W.Cli -- render out/case_0007/repaired.obj --out repaired.svg
+m2w render out/case_0007/repaired.obj --out repaired.svg
 ```
 
 ## Repair your own model
 
-1. Make a folder and put your model in it as `input.obj`. The model must be in metres with Z up. Faces can be
-   triangles or flat polygons.
-2. Add a `case.json` next to it:
+The model must be an OBJ file in metres with Z up. Faces can be triangles or flat polygons.
 
-   ```json
-   {
-     "schemaVersion": "0.1",
-     "caseId": "my-site",
-     "units": "m",
-     "origin": [0, 0, 0],
-     "files": { "input": "input.obj" }
-   }
-   ```
+```bash
+m2w repair my-site.obj
+```
 
-   `caseId` is the name of the output folder. If the model uses map coordinates, set `origin` to a point near the
-   site (for example `[530000, 180000, 0]`). It is subtracted from the model, so the output is in local coordinates.
+The result is in `out/my-site/`; `--out DIR` chooses another folder. If the model uses map coordinates, give a point
+near the site as `--origin`. It is subtracted from the model, so the output is in local coordinates:
 
-3. Run the repair. The result is in `out/my-site/`:
-
-   ```bash
-   dotnet run --project src/M2W.Cli -- repair path/to/my-site --out out
-   ```
+```bash
+m2w repair my-site.obj --origin 530000,180000,0 --out results
+```
 
 ### Settings
 
-To change how much the repair alters, add a `tolerances` block to `case.json`. Any setting you leave out keeps its
-default.
+Options change how much the repair alters. Any setting you leave out keeps its default.
 
-```json
-"tolerances": { "minGap": 0.5, "minEdge": 0.2 }
+```bash
+m2w repair my-site.obj --min-gap 0.5 --min-edge 0.2
 ```
 
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `minGap` | 1.0 m | Gaps between blocks narrower than this are closed |
-| `minEdge` | 0.25 m | Edges, jogs and roof steps smaller than this are removed |
-| `groundSnap` | 0.5 m | Blocks this close to the ground, above or below, are moved onto it |
-| `weld` | 0.001 m | Vertices closer than this become one |
-| `minAngleDeg` | 5° | Triangles with a smaller angle are counted in the warnings (not removed) |
+| Option | In `case.json` | Default | Meaning |
+| --- | --- | --- | --- |
+| `--min-gap` | `minGap` | 1.0 m | Gaps between blocks narrower than this are closed |
+| `--min-edge` | `minEdge` | 0.25 m | Edges, jogs and roof steps smaller than this are removed |
+| `--ground-snap` | `groundSnap` | 0.5 m | Blocks this close to the ground, above or below, are moved onto it |
+| `--weld` | `weld` | 0.001 m | Vertices closer than this become one |
+| `--min-angle` | `minAngleDeg` | 5° | Triangles with a smaller angle are counted in the warnings (not removed) |
+
+To keep the settings with the model, put it in a folder as `input.obj` with a `case.json` next to it, and run
+`m2w repair my-site` on the folder. `caseId` is the name of the output folder:
+
+```json
+{
+  "schemaVersion": "0.1",
+  "caseId": "my-site",
+  "units": "m",
+  "origin": [530000, 180000, 0],
+  "tolerances": { "minGap": 0.5, "minEdge": 0.2 },
+  "files": { "input": "input.obj" }
+}
+```
+
+`m2w --help` lists all commands, and `m2w repair --help` all options.
 
 ### Read the result
 
