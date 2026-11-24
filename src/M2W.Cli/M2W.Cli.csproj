@@ -3,6 +3,25 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>m2w</AssemblyName>
   </PropertyGroup>
+  <!-- The m2w .NET tool (D-056): dotnet tool install -g MassingToWind.Tool -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>m2w</ToolCommandName>
+    <PackageId>MassingToWind.Tool</PackageId>
+    <VersionPrefix>0.1.1</VersionPrefix>
+    <RollForward>Major</RollForward>
+    <Description>m2w: turns rough building massings (OBJ) into clean, closed geometry for wind (CFD) simulation.</Description>
+    <PackageTags>cfd;wind;geometry;mesh-repair;obj;massing;aec;cli</PackageTags>
+    <PackageProjectUrl>https://github.com/eggzec/massing-to-wind</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>massing-to-wind-icon.png</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\docs\assets\massing-to-wind-icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\M2W.Geometry\M2W.Geometry.csproj" />
     <ProjectReference Include="..\M2W.Generator\M2W.Generator.csproj" />

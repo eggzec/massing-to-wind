@@ -1,6 +1,6 @@
 # Massing-to-Wind — Interface Agreement v0.1
 
-Owner: Saif ur Rehman · As of 2026-11-22 · LOCKED: changes need owner approval and a new `schemaVersion`.
+Owner: Saif ur Rehman · As of 2026-11-24 · LOCKED: changes need owner approval and a new `schemaVersion`.
 
 ## Purpose and roles
 
@@ -158,7 +158,10 @@ The solver explains what it did in `report.json`. The checker grades the case in
 | Command | Exit 0 | Exit 1 | Exit 2 |
 | --- | --- | --- | --- |
 | `m2w repair <caseDir>` | Repaired | Repair failed | Bad input |
+| `m2w repair <model.obj>` | Repaired | Repair failed | Bad input |
 | `m2w check <caseDir>` | All checks pass | A check failed | Missing file |
+
+`m2w repair <model.obj>` needs no `case.json`. `caseId` is the file name without `.obj`. `--origin X,Y,Z` (default 0,0,0) and `--min-gap`, `--min-edge`, `--ground-snap`, `--weld` and `--min-angle` (defaults above) give the settings. Output and formats are the same.
 
 ## Folder layout and rules
 
