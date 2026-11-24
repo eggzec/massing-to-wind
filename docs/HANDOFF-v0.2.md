@@ -27,7 +27,7 @@ the repository. Each brief gives your branch, worktree and the D-numbers you may
   - the owner's private hidden set: 310/310, worst tolerance use volume 6.6 %, footprint 11.7 %, height 6.2 %;
   - owner benchmarks pass: the exact cases with zero error, and a real district comes out valid in about 2 s.
 
-  Details are in the README "Results" section.
+  Details are in the README "Validation" section.
 - **Solver** 0.7.1: a 2.5D height-field pipeline in 9 steps (README "How it works", each step with its D-number).
   Output order depends on geometry only (D-047).
 - **CI** (GitHub Actions) is green. Each push runs validate and the determinism check on Linux and Windows, and

@@ -20,6 +20,14 @@ _None open._
 
 ## Log (newest first)
 
+### 2026-11-24 · owner · README rewritten for a first-time reader, led by the geometry repair
+- `README.md`: opens with what the repair does, a fault → fix table and before/after images; new sections on repairing
+  your own model, settings, reading the report and calling the engine from C# (commands and snippet run as written).
+  Results are now a short "Validation" section further down; the full pipeline, per-fault table and project files are
+  kept in fold-out blocks. States that the output has not been meshed in a wind mesher yet.
+- `docs/HANDOFF-v0.2.md`: the reference to the README "Results" section now says "Validation".
+- No code, test or case changed. validate: **GREEN**, 311/311 (`out/summary.json`); locks OK.
+
 ### 2026-11-22 · owner · README header in the eggzec house style; banner and icon
 - `docs/assets/`: `massing-to-wind-banner.{svg,png}` (2400 × 800) and `massing-to-wind-icon.{svg,png}`
   (1024 × 1024), pixel art like the other eggzec repositories: two gusts of wind over a skyline, the name in pixel
