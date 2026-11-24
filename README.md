@@ -2,7 +2,7 @@
 
 # Massing-to-Wind
 
-**Automatic repair of generative-design building massings into simulation-ready geometry for wind (CFD) analysis**
+**Turn rough building massings into clean, closed geometry for wind (CFD) simulation, automatically**
 
 [![CI](https://github.com/eggzec/massing-to-wind/actions/workflows/ci.yml/badge.svg)](https://github.com/eggzec/massing-to-wind/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/tag/eggzec/massing-to-wind?sort=semver&label=release)](https://github.com/eggzec/massing-to-wind/tags)
@@ -10,50 +10,201 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
 
-`m2w` is a pure C# (.NET 8) engine that repairs the building massings produced by generative design tools —
-stacked floor boxes, overlapping blocks, tiny gaps, slivers, open or flipped surfaces, floating blocks, map
-coordinates — into closed, non-intersecting shells that wind (CFD) meshers accept. It reads OBJ and writes the
-repaired OBJ plus a report of every change it made. An independent checker grades the output: 311/311 visible cases
-and 930/930 unseen cases pass, and the output is byte-identical on Linux and Windows.
+Massings from generative design tools look right on screen, but they are often stacks of floor boxes that overlap,
+leave small gaps, miss faces or float above the ground. Wind simulation needs closed solids that do not intersect,
+so someone usually has to clean up every option by hand.
 
-## The problem
-
-Generative design tools produce hundreds of massing options per site, built to look right on screen: stacked
-floor boxes, overlapping blocks, touching walls, tiny gaps, slivers, open or flipped surfaces, blocks floating
-above the ground, large map coordinates. Wind (CFD) meshers need clean, closed, non-intersecting shells.
-Geometry preparation is widely reported as one of the main bottlenecks of the CFD workflow, so pedestrian wind
-comfort is usually checked late, when changing the massing is expensive.
-
-## The approach
-
-1. A seeded generator reproduces how generative tools build massings, then injects the faults they cause,
-   and records the correct answer for each case.
-2. A repair engine fixes the faults without seeing the answers.
-3. An independent checker grades every repaired case: watertightness, orientation, topology, gaps, edge
-   length, volume, footprint and height.
-
-See `AGREEMENT.md` for the file formats and `MILESTONES.md` for the plan. Design choices are in `DECISIONS.md`
-(D-numbers below).
-
-## Before and after
-
-<!-- Images and captions from docs/images/ (generator). Captions are copied from docs/images/showcase.json. -->
+Massing-to-Wind (`m2w`) does that cleanup. Give it an OBJ file and it writes a repaired OBJ, plus a report of every
+change it made. A district of about 500 blocks typically takes under a second.
 
 | Before | After |
 | --- | --- |
-| ![showcase 1 before](docs/images/showcase-1-before.svg) | ![showcase 1 after](docs/images/showcase-1-after.svg) |
-| _1. Stacked floors and overlapping blocks (29 input objects, 2 missing faces) become 4 closed shells; a 0.375 m roof step (above minEdge) is kept._ | |
-| ![showcase 2 before](docs/images/showcase-2-before.svg) | ![showcase 2 after](docs/images/showcase-2-after.svg) |
-| _2. A 0.2 m gap (below minGap 1 m) is closed, so two blocks become one shell; the block farther away stays separate._ | |
-| ![showcase 3 before](docs/images/showcase-3-before.svg) | ![showcase 3 after](docs/images/showcase-3-after.svg) |
-| _3. An inside-out block with 3 missing faces, floating 0.71 m above the ground: faces turned outward, holes closed, set on the ground._ | |
-| ![showcase 4 before](docs/images/showcase-4-before.svg) | ![showcase 4 after](docs/images/showcase-4-after.svg) |
-| _4. Two roofs 0.24 m apart (below minEdge 0.25 m) are flushed to 10.84 m and joined; the taller block stays a shell of its own._ | |
+| ![Before: 29 overlapping floor boxes](docs/images/showcase-1-before.svg) | ![After: 4 closed buildings](docs/images/showcase-1-after.svg) |
+| 29 separate floor boxes, overlapping, with 2 faces missing | 4 closed buildings, ready to mesh |
+
+**Contents:** [What it repairs](#what-it-repairs) · [Quick start](#quick-start) ·
+[Repair your own model](#repair-your-own-model) · [How it works](#how-it-works) · [Limitations](#limitations) ·
+[Validation](#validation) · [Roadmap](#roadmap)
+
+## What it repairs
+
+| Problem in the massing | What `m2w` does |
+| --- | --- |
+| Buildings made of stacked floors | Merges the floors into one solid |
+| Overlapping blocks, touching walls | Joins them and removes the walls inside |
+| Small gaps between blocks | Bridges gaps narrower than `minGap` (1 m) |
+| Missing faces, holes | Closes them |
+| Flipped faces, inside-out blocks | Turns every face outward |
+| Blocks floating above or sunk below the ground | Moves blocks within `groundSnap` (0.5 m) onto the ground |
+| Tiny steps between neighbouring roofs | Levels steps smaller than `minEdge` (0.25 m) to the higher roof |
+| Very short edges, jogs, notches and thin strips | Removes detail smaller than `minEdge` |
+| Duplicate vertices and faces | Merges or removes them |
+| Large map coordinates | Moves the model near the origin and records the shift |
+
+The distances in brackets are defaults, and [you can change them](#settings).
+
+In the output, each building (or group of joined buildings) is one shell. Every shell is watertight, made of
+triangles, faces outward, does not intersect itself and has a closed base at ground level (Z = 0). If `m2w` cannot
+fully repair something, it says so and tells you where (see [Read the result](#read-the-result)).
+
+### More examples
+
+In the "before" images, red lines are open edges and purple faces point the wrong way.
+
+**A 0.2 m gap is closed.** The two near blocks become one solid; the block farther away stays separate.
+
+| Before | After |
+| --- | --- |
+| ![Before: two blocks with a small gap](docs/images/showcase-2-before.svg) | ![After: one joined solid](docs/images/showcase-2-after.svg) |
+
+**An inside-out block is made solid.** It has 3 missing faces and floats 0.71 m above the ground. The faces are
+turned outward, the holes closed and the block set on the ground (with `groundSnap` set to 1 m for this model).
+
+| Before | After |
+| --- | --- |
+| ![Before: inside-out block with missing faces](docs/images/showcase-3-before.svg) | ![After: closed solid on the ground](docs/images/showcase-3-after.svg) |
+
+**Two roofs 0.24 m apart are levelled.** The two blocks are joined into one solid; the taller building stays
+separate.
+
+| Before | After |
+| --- | --- |
+| ![Before: two roofs at almost the same height](docs/images/showcase-4-before.svg) | ![After: one level roof](docs/images/showcase-4-after.svg) |
+
+## Quick start
+
+You need the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (8.0.400 or later). The same commands
+work on Windows, Linux and macOS.
+
+```bash
+git clone https://github.com/eggzec/massing-to-wind.git
+cd massing-to-wind
+dotnet run --project src/M2W.Cli -- repair cases/_example/case_0007
+```
+
+The example is a tower made of six stacked floor boxes, 0.3 m away from a second block, in map coordinates. `m2w`
+turns these 7 boxes (42 faces) into one closed solid of 12 triangles and writes two files to `out/case_0007/`:
+
+| File | What it is |
+| --- | --- |
+| `repaired.obj` | The clean geometry. Open it in any OBJ viewer, such as Rhino, Blender or ParaView |
+| `report.json` | Every change made, with counts and locations |
+
+You can also draw a quick picture without a 3D viewer:
+
+```bash
+dotnet run --project src/M2W.Cli -- render out/case_0007/repaired.obj --out repaired.svg
+```
+
+## Repair your own model
+
+1. Make a folder and put your model in it as `input.obj`. The model must be in metres with Z up. Faces can be
+   triangles or flat polygons.
+2. Add a `case.json` next to it:
+
+   ```json
+   {
+     "schemaVersion": "0.1",
+     "caseId": "my-site",
+     "units": "m",
+     "origin": [0, 0, 0],
+     "files": { "input": "input.obj" }
+   }
+   ```
+
+   `caseId` is the name of the output folder. If the model uses map coordinates, set `origin` to a point near the
+   site (for example `[530000, 180000, 0]`). It is subtracted from the model, so the output is in local coordinates.
+
+3. Run the repair. The result is in `out/my-site/`:
+
+   ```bash
+   dotnet run --project src/M2W.Cli -- repair path/to/my-site --out out
+   ```
+
+### Settings
+
+To change how much the repair alters, add a `tolerances` block to `case.json`. Any setting you leave out keeps its
+default.
+
+```json
+"tolerances": { "minGap": 0.5, "minEdge": 0.2 }
+```
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `minGap` | 1.0 m | Gaps between blocks narrower than this are closed |
+| `minEdge` | 0.25 m | Edges, jogs and roof steps smaller than this are removed |
+| `groundSnap` | 0.5 m | Blocks this close to the ground, above or below, are moved onto it |
+| `weld` | 0.001 m | Vertices closer than this become one |
+| `minAngleDeg` | 5° | Triangles with a smaller angle are counted in the warnings (not removed) |
+
+### Read the result
+
+`report.json` gives the overall `status`:
+
+| `status` | Meaning | Exit code |
+| --- | --- | --- |
+| `repaired` | Everything was repaired | 0 |
+| `partial` | An output was written, but part of it needs a look; `warnings` say what and where | 1 |
+| `failed` | No closed solid could be built | 1 |
+
+If the input cannot be read, the exit code is 2. The report also lists every operation. For example, a closed gap
+looks like this:
+
+```json
+{
+  "op": "closeGap",
+  "pair": ["B01", "B02"],
+  "width_m": 0.3,
+  "fillHeight_m": 18,
+  "minGap_m": 1,
+  "bbox_m": [20, 0, 20.3, 10]
+}
+```
+
+`bbox_m` is the place in plan: min X, min Y, max X, max Y.
+
+The same input always gives the same `repaired.obj`, on Linux and Windows. All file formats are described in
+[AGREEMENT.md](AGREEMENT.md).
+
+### Use it from C#
+
+The engine is pure C# with no native dependencies. Reference `src/M2W.Repair` from your project:
+
+```csharp
+using M2W.Geometry;
+using M2W.Geometry.Models;
+using M2W.Geometry.Stages;
+using M2W.Repair;
+
+var outcome = new MassingRepairer().Repair(new RepairRequest
+{
+    Case = CaseSpec.Load("my-site/case.json"),
+    Input = ObjReader.ReadFile("my-site/input.obj"),
+});
+
+Console.WriteLine($"{outcome.Report.Status}: {outcome.Report.ShellCount} shell(s)");
+if (outcome.Repaired is not null)
+    ObjWriter.WriteFile(outcome.Repaired, "repaired.obj");
+```
 
 ## How it works
 
-The repair engine (`src/M2W.Repair`) reads only `input.obj` and `case.json`. Its output is a 2.5D height field:
-one closed shell per connected footprint, each standing on Z = 0.
+Instead of patching the broken mesh face by face, `m2w` rebuilds it. It cleans each block, looks at the site from
+above, finds the roof height at every point and builds new solids from that plan.
+
+1. **Clean each block.** Move it near the origin, merge duplicate vertices, turn faces outward, close holes and set
+   the block on the ground.
+2. **Merge everything in plan.** Overlay all the blocks and keep the highest roof at each place. Stacked floors,
+   overlaps and touching walls disappear in this one step.
+3. **Remove detail too small to mesh.** Close small gaps, level tiny roof steps and remove short edges.
+4. **Rebuild closed solids.** Build a base, walls and roofs for each footprint. The solids are closed by
+   construction.
+
+<details>
+<summary><b>The full pipeline, with links to the design decisions</b></summary>
+
+The engine is in `src/M2W.Repair`. D-numbers refer to [DECISIONS.md](DECISIONS.md).
 
 1. **Shift, weld, deduplicate.** The case origin is subtracted, so the engine works near zero. Each object keeps
    its own vertex list. Within an object, vertices closer than `weld` are merged; degenerate and duplicate faces
@@ -78,17 +229,61 @@ one closed shell per connected footprint, each standing on Z = 0.
    points are closer than `minEdge`. This step and gap closing are repeated until the plan stops changing.
    (D-033, D-034, D-036)
 9. **Rebuild closed shells.** For each footprint the engine builds a ground face, roofs (triangulated to maximise
-   the smallest angle) and walls, with every column split at the heights that meet it. The shells are closed by
-   construction and written in an order that depends only on their geometry. (D-029, D-031, D-047)
+   the smallest angle) and walls, with every column split at the heights that meet it. The shells are written in an
+   order that depends only on their geometry. (D-029, D-031, D-047)
 
-Steps 6 and 8 run inside the union and step 7 after them. Every operation is listed in `report.json` with counts and
-plan boxes (D-042). When something cannot be fully repaired, the status is `partial` with a located warning, never
-a silent success.
+Steps 6 and 8 run inside the union and step 7 after them. Every operation is listed in `report.json` with counts
+and plan boxes (D-042).
 
-## Results
+</details>
 
-**Visible cases** (`cases/`, from `out/summary.json` after `scripts/validate.ps1` on `main`): **311/311 pass**.
-A combined case counts once under each of its faults.
+## Limitations
+
+Version 0.1 is made for block massings with flat roofs. Check these before you use it:
+
+- **Sloped roofs are not supported.** Sloped faces are ignored and the status is `partial`.
+- **Canopies and overhangs become solid.** The space under them is filled down to the ground and the status is
+  `partial`.
+- **Narrow inlets and courtyards inside one block stay open.** Only gaps between separate blocks are closed.
+- **Thin triangles can remain**, for example on long low walls. They are counted in the warnings.
+- **Volumes can change slightly** where small roof steps are levelled or short jogs removed.
+- **Not yet tested in a wind mesher.** The geometry is checked as described under [Validation](#validation);
+  meshing it in OpenFOAM is on the roadmap.
+- **Object order** does not change the output, apart from rare differences far below the tolerances.
+
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) has the details.
+
+## Performance
+
+Measured on a synthetic district with terraced rows, small gaps, set-back tiers and raised slabs:
+
+| District | One object per block | All in one object |
+| --- | --- | --- |
+| 503 blocks, aligned to the axes | 0.61 s | 0.62 s |
+| 510 blocks, turned up to 8° | 0.79 s | 0.76 s |
+
+About 2,000 blocks take 3–3.5 s. These are in-process times in a Release build on the development machine, median of
+7 runs after warm-up. Single runs of the 500-block districts ranged from 0.4 to 1.8 s.
+
+## Validation
+
+The repair is tested against generated massings with known faults and known correct answers. A separate checker,
+which shares no repair code, compares each result with its answer: watertightness, orientation, topology, gaps, edge
+length, volume, footprint and height.
+
+| Test set | Passed |
+| --- | --- |
+| Cases in this repository (`cases/`) | 311/311 |
+| Unseen cases, from generator seeds not used during development | 930/930 |
+| Private cases, kept by the owner | 310/310 |
+
+The engine also repaired a real district into valid geometry in about 2 s.
+
+<details>
+<summary><b>Results by fault, unseen seeds and private cases</b></summary>
+
+**Cases in this repository** (from `out/summary.json` after `scripts/validate`). A combined case counts once under
+each of its faults.
 
 | Fault | Passed / total |
 | --- | --- |
@@ -107,98 +302,48 @@ A combined case counts once under each of its faults.
 | sunkBlock | 30/30 |
 | touchingWalls | 29/29 |
 
-**Unseen seeds** (the current generator run with `m2w generate --seed 777`, `2024` and `99991` into a folder
-outside the repository; the solver never saw these cases while it was being written): **930/930 pass**
-(310/310 per seed).
-
-**Owner's private results** (run by the owner; the material is not shared):
-_The hidden set stays private on purpose: its cases and seed were never seen by the repair engine while it was
-being written, so it measures overfitting to the visible cases. Publishing it would end that. The benchmark
-geometry is third-party material and is not ours to share. Only totals are reported._
-- Private hidden set: **310/310 pass**. Worst tolerance use: volume 6.6 %, footprint 11.7 %, height 6.2 %.
-- Owner benchmarks on geometry the generator did not make: the cases with exact answers all pass with zero
-  error. A real district comes out valid in about 2 s.
-
 A `sliver` pass says the shell is valid and the right size. It does not say that thin triangles are gone, because
-minimum angle is not graded in v0.1 (see Limitations).
+minimum angle is not graded in v0.1 (see [Limitations](#limitations)).
 
-## Runtime
+**Unseen seeds:** the generator run with `m2w generate --seed 777`, `2024` and `99991` into a folder outside the
+repository; 310/310 per seed.
 
-Synthetic district of about 500 blocks: terraced rows with shared walls, gaps of 0.1–0.9 m, set-back tiers and
-raised slabs. Measured in-process, Release build, on the development machine, median of 7 runs after warm-up:
+**Private cases** (run by the owner): 310/310. Worst tolerance use: volume 6.6 %, footprint 11.7 %, height 6.2 %.
+The set stays private so that it measures overfitting to the visible cases. The owner also ran benchmarks on
+third-party geometry that the generator did not make and that is not ours to share: the cases with exact answers all
+pass with zero error, and a real district comes out valid in about 2 s.
 
-| District | One object per part | One object |
-| --- | --- | --- |
-| 503 parts, on the axes, heights to 0.1 m | 0.61 s | 0.62 s |
-| 510 parts, city blocks turned up to 8°, heights to 1 cm | 0.79 s | 0.76 s |
+</details>
 
-Single runs ranged from 0.4 to 1.8 s. 2,020 parts take about 3–3.5 s. Earlier measurements and the profile behind
-them are in D-040. The test limit is 15 s (`Step9ScaleTests`, 3 × the 5 s target).
-
-## Quick start
-
-Requires the .NET 8 SDK, 8.0.400 or later (pinned in `global.json`). No other tools are needed, except Git Bash on
-Windows for the lock check inside validate.
-
-Linux and macOS (bash), or Git Bash on Windows:
+To run the build, tests and all cases yourself (on Windows this needs Git Bash):
 
 ```bash
-scripts/setup.sh          # adds all projects to M2W.sln and builds
-scripts/validate.sh       # build, test, run all cases, check locks, print out/summary.json
-dotnet run --project src/M2W.Cli -- check cases/_example/case_0007
+scripts/validate.sh                                             # Linux, macOS, Git Bash
+powershell -ExecutionPolicy Bypass -File scripts\validate.ps1   # Windows PowerShell
 ```
-
-Windows (PowerShell):
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
-powershell -ExecutionPolicy Bypass -File scripts\validate.ps1
-dotnet run --project src/M2W.Cli -- check cases/_example/case_0007
-```
-
-The last line grades the example case against its expected answer. It reads `out/case_0007/repaired.obj`, which
-`validate` writes, and writes `out/case_0007/result.json`. Other commands (each writes to `<out>/<caseId>/`):
-
-```bash
-dotnet run --project src/M2W.Cli -- repair   cases/case_0101 --out out   # repair one case: repaired.obj, report.json
-dotnet run --project src/M2W.Cli -- check    cases/case_0101 --out out   # grade it: result.json
-dotnet run --project src/M2W.Cli -- run-all  cases --out out             # repair and grade every case, summary.json
-dotnet run --project src/M2W.Cli -- generate ../my-cases --seed 777      # a new set of cases outside the repo
-```
-
-## Limitations
-
-The output is a 2.5D height field, so a few things are not represented:
-- **Canopies and overhangs** are filled down to the ground. The status is `partial`, with the region located.
-- **Sloped roofs** are ignored. The status is `partial`.
-- **Thin triangles** are counted in the warnings but not removed. Minimum angle is not graded in v0.1.
-- **Roof flushing** adds a little volume, and the least-change jog rule can move the other wall.
-- **Input order:** object order does not change the output, with two exceptions far below the tolerances: points
-  of different objects within `weld` of each other keep the position of the one met first, and ties between equally
-  good roof triangulations depend on order. Rare: found in 4 of 930 unseen cases with two shuffles each, all still
-  passing; planned for v0.2.
-
-Details, with D-numbers, are in [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
 
 ## Roadmap
 
-**v0.2:**
-- Sloped roofs, still as a height field (piecewise planar roofs).
-- Overhangs and canopies (needs a 3D union).
-- Minimum-angle grading and refinement (D-025, D-035).
-- A validity-only grading mode for real data without `expected.json`.
+**v0.2**
+- Sloped roofs.
+- Overhangs and canopies.
+- Minimum-angle grading and refinement.
+- Validity checks for real models that have no known answer.
 
-**Later:**
-1. External validation: OpenFOAM `surfaceCheck`, `snappyHexMesh` and `checkMesh` on repaired output.
-2. Rhino/Grasshopper component wrapping the engine.
-3. Batch repair of many options on AWS (Amazon Web Services): one case per job.
-4. Fast wind-comfort surrogate model trained on the repaired, simulated options.
+**Later**
+- Validation in OpenFOAM: `surfaceCheck`, `snappyHexMesh` and `checkMesh` on repaired output.
+- A Rhino/Grasshopper component.
+- Batch repair of many design options in the cloud.
+- A fast wind-comfort model trained on the repaired, simulated options.
 
-## How this was built
+## About this project
 
-v0.1 was built in five days (2026-11-18 to 2026-11-22) by three AI coding agents (Claude Code), each with its own role, branch and folder,
-overseen by a human owner who set direction, answered questions and held the milestone gates. The working files
-are kept in the repository on purpose, as a record of how the project was run:
+v0.1 was built in five days (2026-11-18 to 2026-11-22) by three AI coding agents (Claude Code) in separate roles,
+overseen by a human owner: one generated the test cases, one wrote the checker and one wrote the repair engine,
+without seeing the expected answers. The working files are kept as a record; you don't need them to use the engine.
+
+<details>
+<summary><b>Project files</b></summary>
 
 | File | What it is |
 | --- | --- |
@@ -206,13 +351,14 @@ are kept in the repository on purpose, as a record of how the project was run:
 | [`CLAUDE.md`](CLAUDE.md), [`.claude/agents/`](.claude/agents/) | Rules every agent follows, and one brief per role: generator, checker, solver. |
 | [`MILESTONES.md`](MILESTONES.md) | The plan, with acceptance criteria and a gate per milestone. |
 | [`PROGRESS.md`](PROGRESS.md) | The day-by-day log of every session, with pass counts. |
-| [`DECISIONS.md`](DECISIONS.md) | Every design choice someone could question (the D-numbers cited above). |
+| [`DECISIONS.md`](DECISIONS.md) | Every design choice someone could question (the D-numbers above). |
 | [`OWNER_GUIDE.md`](OWNER_GUIDE.md) | How the owner ran the agents, gates and hidden cases. |
 | [`docs/HANDOFF-v0.2.md`](docs/HANDOFF-v0.2.md) | Where v0.2 starts. |
 
-The key rule is separation: the solver reads only `input.obj` and `case.json`, never the expected answers or the
-generator and checker code; `scripts/check-locks.sh` fails if an agent edits a locked path. You don't need any of
-these files to use the engine; see Quick start.
+The solver reads only `input.obj` and `case.json`, never the expected answers or the generator and checker code.
+`scripts/check-locks.sh` fails if an agent edits a locked path.
+
+</details>
 
 ## License
 
