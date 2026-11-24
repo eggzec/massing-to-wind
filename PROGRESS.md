@@ -5,7 +5,7 @@
 _Agents: put questions that need the owner here (newest first). Owner: answer inline and delete when done._
 
 - **`lock-v0.1` for the approved AGREEMENT.md edit (D-057).** The last commit on `cli/m2w-tool` adds the approved
-  `m2w repair <model.obj>` row to the command-line table and changes nothing else. Until the owner moves the tag,
+  `m2w repair <model.obj>` row and a short note to the command-line section, and updates the date. Until the owner moves the tag,
   `locks` reports FAIL for `AGREEMENT.md` (and CI would too). On that commit: `git tag -f lock-v0.1`, and after the
   merge `git push -f origin lock-v0.1`.
 
